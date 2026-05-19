@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: fish-ai-router
+  profiles:
+    active: local
+
+  # 数据库配置
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/yu_ai_router?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+    username: root
+    password:
+  # Session 配置
+  session:
+    store-type: redis
+  # Redis 配置
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 0
+server:
+  port: 8123
+  servlet:
+    context-path: /api
+# MyBatis Flex 配置
+mybatis-flex:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+# springdoc-openapi
+springdoc:
+  group-configs:
+    - group: 'default'
+      packages-to-scan: com.yxc.airouter.controller
+# knife4j
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+
