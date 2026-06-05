@@ -56,7 +56,12 @@ import { useRouter } from 'vue-router'
 import { type MenuProps, message } from 'ant-design-vue'
 import { useLoginUserStore } from '@/stores/loginUser.ts'
 import { userLogout } from '@/api/userController.ts'
-import { LogoutOutlined, HomeOutlined } from '@ant-design/icons-vue'
+import {
+  LogoutOutlined,
+  HomeOutlined,
+  CommentOutlined,
+  KeyOutlined,
+} from '@ant-design/icons-vue'
 
 const loginUserStore = useLoginUserStore()
 const router = useRouter()
@@ -79,6 +84,18 @@ const originItems = [
     key: '/admin/userManage',
     label: '用户管理',
     title: '用户管理',
+  },
+  {
+    key: '/chat',
+    icon: () => h(CommentOutlined),
+    label: 'AI 对话',
+    title: 'AI 对话',
+  },
+  {
+    key: '/user/apikey',
+    icon: () => h(KeyOutlined),
+    label: 'API Key',
+    title: 'API Key 管理',
   },
 ]
 
