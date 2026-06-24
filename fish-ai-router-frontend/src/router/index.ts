@@ -5,6 +5,8 @@ import UserRegisterPage from '@/pages/user/UserRegisterPage.vue'
 import UserManagePage from '@/pages/admin/UserManagePage.vue'
 import ChatPage from '@/pages/ChatPage.vue'
 import ApiKeyPage from '@/pages/user/ApiKeyPage.vue'
+import ModelManagePage from '@/pages/admin/ModelManagePage.vue'
+import ProviderManagePage from '@/pages/admin/ProviderManagePage.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -38,6 +40,16 @@ const router = createRouter({
       path: '/user/apikey',
       name: 'API Key 管理',
       component: ApiKeyPage,
+    },
+    {
+      path: '/admin/modelManage',
+      name: '模型管理',
+      component: ModelManagePage,
+    },
+    {
+      path: '/admin/providerManage',
+      name: '提供者管理',
+      component: ProviderManagePage,
     },
   ],
 })

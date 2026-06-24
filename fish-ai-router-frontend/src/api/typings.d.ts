@@ -25,6 +25,18 @@ declare namespace API {
     message?: string
   }
 
+  type BaseResponseListModelVO = {
+    code?: number
+    data?: ModelVO[]
+    message?: string
+  }
+
+  type BaseResponseListProviderVO = {
+    code?: number
+    data?: ProviderVO[]
+    message?: string
+  }
+
   type BaseResponseListRequestLog = {
     code?: number
     data?: RequestLog[]
@@ -43,15 +55,39 @@ declare namespace API {
     message?: string
   }
 
+  type BaseResponseModelVO = {
+    code?: number
+    data?: ModelVO
+    message?: string
+  }
+
   type BaseResponsePageApiKeyVO = {
     code?: number
     data?: PageApiKeyVO
     message?: string
   }
 
+  type BaseResponsePageModelVO = {
+    code?: number
+    data?: PageModelVO
+    message?: string
+  }
+
+  type BaseResponsePageProviderVO = {
+    code?: number
+    data?: PageProviderVO
+    message?: string
+  }
+
   type BaseResponsePageUserVO = {
     code?: number
     data?: PageUserVO
+    message?: string
+  }
+
+  type BaseResponseProviderVO = {
+    code?: number
+    data?: ProviderVO
     message?: string
   }
 
@@ -79,10 +115,6 @@ declare namespace API {
     message?: string
   }
 
-  type chatCompletions1Params = {
-    apiKeyId: number
-  }
-
   type ChatMessage = {
     role?: string
     content?: string
@@ -94,14 +126,24 @@ declare namespace API {
     stream?: boolean
     temperature?: number
     max_tokens?: number
+    enable_reasoning?: boolean
+    routing_strategy?: string
   }
 
   type DeleteRequest = {
     id?: number
   }
 
+  type getModelVOByIdParams = {
+    id: number
+  }
+
   type getMyLogsParams = {
     limit?: number
+  }
+
+  type getProviderVOByIdParams = {
+    id: number
   }
 
   type getUserByIdParams = {
@@ -110,6 +152,14 @@ declare namespace API {
 
   type getUserVOByIdParams = {
     id: number
+  }
+
+  type listActiveModelsByProviderParams = {
+    providerId: number
+  }
+
+  type listActiveModelsByTypeParams = {
+    modelType: string
   }
 
   type listMyApiKeysParams = {
@@ -128,8 +178,89 @@ declare namespace API {
     updateTime?: string
   }
 
+  type ModelAddRequest = {
+    providerId?: number
+    modelKey?: string
+    modelName?: string
+    modelType?: string
+    description?: string
+    contextLength?: number
+    inputPrice?: number
+    outputPrice?: number
+    priority?: number
+    defaultTimeout?: number
+    capabilities?: string
+  }
+
+  type ModelQueryRequest = {
+    pageNum?: number
+    pageSize?: number
+    sortField?: string
+    sortOrder?: string
+    providerId?: number
+    modelKey?: string
+    modelName?: string
+    modelType?: string
+    status?: string
+  }
+
+  type ModelUpdateRequest = {
+    id?: number
+    modelName?: string
+    description?: string
+    contextLength?: number
+    inputPrice?: number
+    outputPrice?: number
+    status?: string
+    priority?: number
+    defaultTimeout?: number
+    capabilities?: string
+  }
+
+  type ModelVO = {
+    id?: number
+    providerId?: number
+    providerName?: string
+    providerDisplayName?: string
+    modelKey?: string
+    modelName?: string
+    modelType?: string
+    description?: string
+    contextLength?: number
+    inputPrice?: number
+    outputPrice?: number
+    status?: string
+    healthStatus?: string
+    avgLatency?: number
+    successRate?: number
+    priority?: number
+    defaultTimeout?: number
+    supportReasoning?: number
+    capabilities?: string
+    createTime?: string
+    updateTime?: string
+  }
+
   type PageApiKeyVO = {
     records?: ApiKeyVO[]
+    pageNumber?: number
+    pageSize?: number
+    totalPage?: number
+    totalRow?: number
+    optimizeCountQuery?: boolean
+  }
+
+  type PageModelVO = {
+    records?: ModelVO[]
+    pageNumber?: number
+    pageSize?: number
+    totalPage?: number
+    totalRow?: number
+    optimizeCountQuery?: boolean
+  }
+
+  type PageProviderVO = {
+    records?: ProviderVO[]
     pageNumber?: number
     pageSize?: number
     totalPage?: number
@@ -146,17 +277,72 @@ declare namespace API {
     optimizeCountQuery?: boolean
   }
 
+  type ProviderAddRequest = {
+    providerName?: string
+    displayName?: string
+    baseUrl?: string
+    apiKey?: string
+    priority?: number
+    config?: string
+  }
+
+  type ProviderQueryRequest = {
+    pageNum?: number
+    pageSize?: number
+    sortField?: string
+    sortOrder?: string
+    providerName?: string
+    displayName?: string
+    status?: string
+    healthStatus?: string
+  }
+
+  type ProviderUpdateRequest = {
+    id?: number
+    displayName?: string
+    baseUrl?: string
+    apiKey?: string
+    status?: string
+    priority?: number
+    config?: string
+  }
+
+  type ProviderVO = {
+    id?: number
+    providerName?: string
+    displayName?: string
+    baseUrl?: string
+    status?: string
+    healthStatus?: string
+    avgLatency?: number
+    successRate?: number
+    priority?: number
+    config?: string
+    createTime?: string
+    updateTime?: string
+  }
+
   type RequestLog = {
     id?: number
+    traceId?: string
     userId?: number
     apiKeyId?: number
+    modelId?: number
+    requestModel?: string
     modelName?: string
+    requestType?: string
+    source?: string
     promptTokens?: number
     completionTokens?: number
     totalTokens?: number
     duration?: number
     status?: string
     errorMessage?: string
+    errorCode?: string
+    routingStrategy?: string
+    isFallback?: number
+    clientIp?: string
+    userAgent?: string
     createTime?: string
     updateTime?: string
   }
