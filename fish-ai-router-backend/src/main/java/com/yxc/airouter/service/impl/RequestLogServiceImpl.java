@@ -1,7 +1,9 @@
 package com.yxc.airouter.service.impl;
 
+import cn.hutool.core.util.IdUtil;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.yxc.airouter.mapper.RequestLogMapper;
+import com.yxc.airouter.model.dto.log.RequestLogDTO;
 import com.yxc.airouter.model.entity.RequestLog;
 import com.yxc.airouter.service.ApiKeyService;
 import com.yxc.airouter.service.RequestLogService;
@@ -47,6 +49,54 @@ public class RequestLogServiceImpl implements RequestLogService {
         // 更新 API Key 的使用统计（仅成功的请求）
         if ("success".equals(status) && apiKeyId != null && totalTokens != null && totalTokens > 0) {
             apiKeyService.updateUsageStats(apiKeyId, totalTokens);
+        }
+    }
+
+    @Override
+    public void logRequest(RequestLogDTO requestLogDTO) {
+        if (requestLogDTO == null) {
+            return;
+        }
+
+        // 如果没有 traceId，生成一个
+        if (requestLogDTO.getTraceId() == null) {
+            requestLogDTO.setTraceId(IdUtil.simpleUUID());
+        }
+
+        // 创建请求日志
+        RequestLog log = RequestLog.builder()
+                .traceId(requestLogDTO.getTraceId())
+                .userId(requestLogDTO.getUserId())
+                .apiKeyId(requestLogDTO.getApiKeyId())
+                .modelId(requestLogDTO.getModelId())
+                .requestModel(requestLogDTO.getRequestModel())
+                .modelName(requestLogDTO.getRequestModel())  // 兼容字段
+                .requestType(requestLogDTO.getRequestType() != null ? requestLogDTO.getRequestType() : "chat")
+                .source(requestLogDTO.getSource() != null ? requestLogDTO.getSource() : "web")
+                .promptTokens(requestLogDTO.getPromptTokens() != null ? requestLogDTO.getPromptTokens() : 0)
+                .completionTokens(requestLogDTO.getCompletionTokens() != null ? requestLogDTO.getCompletionTokens() : 0)
+                .totalTokens(requestLogDTO.getTotalTokens() != null ? requestLogDTO.getTotalTokens() : 0)
+                .duration(requestLogDTO.getDuration() != null ? requestLogDTO.getDuration() : 0)
+                .status(requestLogDTO.getStatus())
+                .errorMessage(requestLogDTO.getErrorMessage())
+                .errorCode(requestLogDTO.getErrorCode())
+                .routingStrategy(requestLogDTO.getRoutingStrategy())
+                .isFallback(requestLogDTO.getIsFallback() != null && requestLogDTO.getIsFallback() ? 1 : 0)
+                .clientIp(requestLogDTO.getClientIp())
+                .userAgent(requestLogDTO.getUserAgent())
+                .createTime(LocalDateTime.now())
+                .updateTime(LocalDateTime.now())
+                .build();
+
+        // 保存日志
+        requestLogMapper.insert(log);
+
+        // 更新 API Key 的使用统计（仅成功的请求且有 apiKeyId）
+        if ("success".equals(requestLogDTO.getStatus()) &&
+                requestLogDTO.getApiKeyId() != null &&
+                requestLogDTO.getTotalTokens() != null &&
+                requestLogDTO.getTotalTokens() > 0) {
+            apiKeyService.updateUsageStats(requestLogDTO.getApiKeyId(), requestLogDTO.getTotalTokens());
         }
     }
 

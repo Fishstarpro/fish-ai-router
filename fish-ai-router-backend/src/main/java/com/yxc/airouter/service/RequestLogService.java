@@ -1,5 +1,6 @@
 package com.yxc.airouter.service;
 
+import com.yxc.airouter.model.dto.log.RequestLogDTO;
 import com.yxc.airouter.model.entity.RequestLog;
 
 import java.util.List;
@@ -12,6 +13,8 @@ public interface RequestLogService {
     void logRequest(Long userId, Long apiKeyId, String modelName,
                     Integer promptTokens, Integer completionTokens, Integer totalTokens,
                     Integer duration, String status, String errorMessage);
+
+    void logRequest(RequestLogDTO requestLogDTO);
 
     /**
      * 查询用户的请求日志

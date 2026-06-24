@@ -6,9 +6,9 @@ spring:
   # 数据库配置
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/yu_ai_router?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+    url: jdbc:mysql://localhost:3306/yu_ai_router?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: root
-    password:
+    password: Yxc13731926265
   # Session 配置
   session:
     store-type: redis
@@ -19,15 +19,15 @@ spring:
       port: 6379
       database: 0
   # spring-ai
-  ai:
-    openai:
-      # 通义千问兼容 OpenAI 接口
-      base-url: https://dashscope.aliyuncs.com/compatible-mode
-      api-key:
-      chat:
-        options:
-          model: qwen-plus
-          temperature: 0.7
+#  ai:
+#    openai:
+#      # 通义千问兼容 OpenAI 接口
+#      base-url: https://dashscope.aliyuncs.com/compatible-mode
+#      api-key: sk-550fb9be805d49d2ada0be9853460c29
+#      chat:
+#        options:
+#          model: qwen-plus
+#          temperature: 0.7
 server:
   port: 8123
   servlet:

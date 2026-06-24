@@ -24,8 +24,17 @@ public class RequestLog implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
+    /**
+     * id
+     */
     @Id(keyType = KeyType.Generator, value = KeyGenerators.snowFlakeId)
     private Long id;
+
+    /**
+     * 链路追踪ID
+     */
+    @Column("traceId")
+    private String traceId;
 
     /**
      * 用户id
@@ -40,10 +49,34 @@ public class RequestLog implements Serializable {
     private Long apiKeyId;
 
     /**
-     * 使用的模型名称
+     * 实际调用的模型id
+     */
+    @Column("modelId")
+    private Long modelId;
+
+    /**
+     * 请求的模型标识
+     */
+    @Column("requestModel")
+    private String requestModel;
+
+    /**
+     * 使用的模型名称（兼容字段）
      */
     @Column("modelName")
     private String modelName;
+
+    /**
+     * 请求类型：chat/embedding/image
+     */
+    @Column("requestType")
+    private String requestType;
+
+    /**
+     * 调用来源：web/api
+     */
+    @Column("source")
+    private String source;
 
     /**
      * 输入Token数
@@ -80,6 +113,36 @@ public class RequestLog implements Serializable {
      */
     @Column("errorMessage")
     private String errorMessage;
+
+    /**
+     * 错误码
+     */
+    @Column("errorCode")
+    private String errorCode;
+
+    /**
+     * 使用的路由策略
+     */
+    @Column("routingStrategy")
+    private String routingStrategy;
+
+    /**
+     * 是否为Fallback请求
+     */
+    @Column("isFallback")
+    private Integer isFallback;
+
+    /**
+     * 客户端IP
+     */
+    @Column("clientIp")
+    private String clientIp;
+
+    /**
+     * User-Agent
+     */
+    @Column("userAgent")
+    private String userAgent;
 
     /**
      * 创建时间

@@ -1,5 +1,6 @@
 package com.yxc.airouter.controller;
 
+import cn.hutool.extra.servlet.JakartaServletUtil;
 import com.yxc.airouter.annotation.AuthCheck;
 import com.yxc.airouter.common.ResultUtils;
 import com.yxc.airouter.constant.UserConstant;
@@ -7,7 +8,6 @@ import com.yxc.airouter.exception.BusinessException;
 import com.yxc.airouter.exception.ErrorCode;
 import com.yxc.airouter.model.dto.chat.ChatRequest;
 import com.yxc.airouter.model.dto.chat.ChatResponse;
-import com.yxc.airouter.model.entity.ApiKey;
 import com.yxc.airouter.model.entity.User;
 import com.yxc.airouter.service.ApiKeyService;
 import com.yxc.airouter.service.ChatService;
@@ -17,7 +17,10 @@ import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/internal/chat")
@@ -33,6 +36,7 @@ public class InternalChatController {
     @Resource
     private UserService userService;
 
+    /*@Deprecated
     @PostMapping(value = "/completions", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.TEXT_EVENT_STREAM_VALUE})
     @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE)
     @Operation(summary = "内部聊天接口")
@@ -47,7 +51,7 @@ public class InternalChatController {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "apiKey无效或已失效");
         }
 
-        if (apiKey.getUserId() != loginUser.getId()) {
+        if (!apiKey.getUserId().equals(loginUser.getId())) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权使用该apiKey");
         }
 
@@ -70,7 +74,37 @@ public class InternalChatController {
 
             return ResultUtils.success(response);
         }
+    }*/
+
+    /**
+     * 内部聊天接口（网页端对话）
+     * 支持流式和非流式响应
+     */
+    @PostMapping(value = "/completions", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.TEXT_EVENT_STREAM_VALUE})
+    @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE)
+    @Operation(summary = "内部聊天接口")
+    public Object chatCompletions(@RequestBody ChatRequest request,
+                                  HttpServletRequest httpRequest) {
+        User loginUser = userService.getLoginUser(httpRequest);
+
+        // 1. 参数校验
+        if (request.getMessages() == null || request.getMessages().isEmpty()) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "messages 不能为空");
+        }
+
+        // 2. 获取客户端IP和User-Agent
+        String clientIp = JakartaServletUtil.getClientIP(httpRequest);
+        String userAgent = httpRequest.getHeader("User-Agent");
+
+        // 3. 判断是否为流式请求
+        Boolean stream = request.getStream();
+        if (stream != null && stream) {
+            // 流式响应（网页端调用，不传 apiKeyId）
+            return chatService.chatStream(request, loginUser.getId(), null, clientIp, userAgent);
+        } else {
+            // 非流式响应（网页端调用，不传 apiKeyId）
+            ChatResponse response = chatService.chat(request, loginUser.getId(), null, clientIp, userAgent);
+            return ResultUtils.success(response);
+        }
     }
-
-
 }

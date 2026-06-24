@@ -26,3 +26,5 @@ replay_pid*
 # 自定义
 CLAUDE.md
 vision.js
+.claude
+.reasonix

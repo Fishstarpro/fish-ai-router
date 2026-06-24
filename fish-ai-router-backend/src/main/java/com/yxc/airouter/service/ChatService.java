@@ -9,10 +9,15 @@ public interface ChatService {
     /**
      * 非流式聊天
      */
-    ChatResponse chat(ChatRequest chatRequest, Long userId, Long apiKeyId);
+//    ChatResponse chat(ChatRequest chatRequest, Long userId, Long apiKeyId);
+
+    ChatResponse chat(ChatRequest chatRequest, Long userId, Long apiKeyId, String clientIp, String userAgent);
+
 
     /**
      * 流式聊天
      */
-    Flux<String> chatStream(ChatRequest chatRequest, Long userId, Long apiKeyId);
+//    Flux<String> chatStream(ChatRequest chatRequest, Long userId, Long apiKeyId);
+
+    Flux<String> chatStream(ChatRequest chatRequest, Long userId, Long apiKeyId, String clientIp, String userAgent);
 }

@@ -1,5 +1,6 @@
 package com.yxc.airouter.controller;
 
+import cn.hutool.extra.servlet.JakartaServletUtil;
 import com.yxc.airouter.exception.BusinessException;
 import com.yxc.airouter.exception.ErrorCode;
 import com.yxc.airouter.model.dto.chat.ChatRequest;
@@ -24,38 +25,45 @@ public class ChatController {
     @Resource
     private ApiKeyService apiKeyService;
 
+    /**
+     * Chat Completions 接口
+     * 支持流式和非流式响应
+     */
     @PostMapping(value = "/completions", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.TEXT_EVENT_STREAM_VALUE})
     @Operation(summary = "Chat Completions")
-    public Object chatCompletions(@RequestBody ChatRequest chatRequest,
-                                @RequestHeader(value = "Authorization", required = false) String authorization,
-                                HttpServletRequest request) {
-        //1.验证api key
+    public Object chatCompletions(@RequestBody ChatRequest request,
+                                  @RequestHeader(value = "Authorization", required = false) String authorization,
+                                  HttpServletRequest httpRequest) {
+        // 1. 验证 API Key
         if (authorization == null || !authorization.startsWith("Bearer ")) {
-            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "缺少或无效的authorization");
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "缺少或无效的 Authorization Header");
         }
 
+        // 去掉 "Bearer " 前缀
         String apiKeyValue = authorization.substring(7);
-
         ApiKey apiKey = apiKeyService.getByKeyValue(apiKeyValue);
 
         if (apiKey == null) {
-            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "apiKey无效或已失效");
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "API Key 无效或已失效");
         }
-        //2.验证chatRequest
-        if (chatRequest.getMessages() == null || chatRequest.getMessages().isEmpty()) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "messages不能为空");
+
+        // 2. 参数校验
+        if (request.getMessages() == null || request.getMessages().isEmpty()) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "messages 不能为空");
         }
-        //设置默认模型
-        if (chatRequest.getModel() == null || chatRequest.getModel().isEmpty()) {
-            chatRequest.setModel("qwen-plus");
-        }
-        //3.判断是否为流式请求
-        if (chatRequest.getStream() != null && chatRequest.getStream()) {
-            return chatService.chatStream(chatRequest, apiKey.getUserId(), apiKey.getId());
+
+        // 3. 获取客户端IP和User-Agent
+        String clientIp = JakartaServletUtil.getClientIP(httpRequest);
+        String userAgent = httpRequest.getHeader("User-Agent");
+
+        // 4. 判断是否为流式请求
+        Boolean stream = request.getStream();
+        if (stream != null && stream) {
+            // 流式响应
+            return chatService.chatStream(request, apiKey.getUserId(), apiKey.getId(), clientIp, userAgent);
         } else {
-            return chatService.chat(chatRequest, apiKey.getUserId(), apiKey.getId());
+            // 非流式响应
+            return chatService.chat(request, apiKey.getUserId(), apiKey.getId(), clientIp, userAgent);
         }
     }
-
-
 }
