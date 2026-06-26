@@ -2,6 +2,7 @@ package com.yxc.airouter.controller;
 
 import cn.hutool.extra.servlet.JakartaServletUtil;
 import com.yxc.airouter.annotation.AuthCheck;
+import com.yxc.airouter.annotation.RateLimit;
 import com.yxc.airouter.common.ResultUtils;
 import com.yxc.airouter.constant.UserConstant;
 import com.yxc.airouter.exception.BusinessException;
@@ -82,6 +83,7 @@ public class InternalChatController {
      */
     @PostMapping(value = "/completions", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.TEXT_EVENT_STREAM_VALUE})
     @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE)
+    @RateLimit(type = RateLimit.LimitType.API_KEY, limit = 60)
     @Operation(summary = "内部聊天接口")
     public Object chatCompletions(@RequestBody ChatRequest request,
                                   HttpServletRequest httpRequest) {

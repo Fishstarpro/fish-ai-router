@@ -1,10 +1,8 @@
 package com.yxc.airouter.controller;
 
-import cn.hutool.extra.servlet.JakartaServletUtil;
-import com.yxc.airouter.exception.BusinessException;
-import com.yxc.airouter.exception.ErrorCode;
+import com.yxc.airouter.annotation.RateLimit;
+import com.yxc.airouter.common.ResultUtils;
 import com.yxc.airouter.model.dto.chat.ChatRequest;
-import com.yxc.airouter.model.entity.ApiKey;
 import com.yxc.airouter.service.ApiKeyService;
 import com.yxc.airouter.service.ChatService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -30,11 +28,12 @@ public class ChatController {
      * 支持流式和非流式响应
      */
     @PostMapping(value = "/completions", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.TEXT_EVENT_STREAM_VALUE})
+    @RateLimit(type = RateLimit.LimitType.API_KEY, limit = 1)
     @Operation(summary = "Chat Completions")
     public Object chatCompletions(@RequestBody ChatRequest request,
                                   @RequestHeader(value = "Authorization", required = false) String authorization,
                                   HttpServletRequest httpRequest) {
-        // 1. 验证 API Key
+        /*// 1. 验证 API Key
         if (authorization == null || !authorization.startsWith("Bearer ")) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "缺少或无效的 Authorization Header");
         }
@@ -64,6 +63,7 @@ public class ChatController {
         } else {
             // 非流式响应
             return chatService.chat(request, apiKey.getUserId(), apiKey.getId(), clientIp, userAgent);
-        }
+        }*/
+        return ResultUtils.success(null);
     }
 }
