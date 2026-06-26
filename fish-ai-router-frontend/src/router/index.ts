@@ -7,6 +7,7 @@ import ChatPage from '@/pages/ChatPage.vue'
 import ApiKeyPage from '@/pages/user/ApiKeyPage.vue'
 import ModelManagePage from '@/pages/admin/ModelManagePage.vue'
 import ProviderManagePage from '@/pages/admin/ProviderManagePage.vue'
+import BlacklistManagePage from '@/pages/BlacklistManagePage.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -50,6 +51,11 @@ const router = createRouter({
       path: '/admin/providerManage',
       name: '提供者管理',
       component: ProviderManagePage,
+    },
+    {
+      path: '/admin/blacklistManage',
+      name: '黑名单管理',
+      component: BlacklistManagePage,
     },
   ],
 })

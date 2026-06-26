@@ -91,6 +91,12 @@ declare namespace API {
     message?: string
   }
 
+  type BaseResponseSetString = {
+    code?: number
+    data?: string[]
+    message?: string
+  }
+
   type BaseResponseString = {
     code?: number
     data?: string
@@ -115,6 +121,11 @@ declare namespace API {
     message?: string
   }
 
+  type BlacklistRequest = {
+    ip?: string
+    reason?: string
+  }
+
   type ChatMessage = {
     role?: string
     content?: string
@@ -128,6 +139,10 @@ declare namespace API {
     max_tokens?: number
     enable_reasoning?: boolean
     routing_strategy?: string
+  }
+
+  type checkBlacklistParams = {
+    ip: string
   }
 
   type DeleteRequest = {
