@@ -428,4 +428,24 @@ declare namespace API {
     userRole?: string
     createTime?: string
   }
+
+  type StreamResponse = {
+    id: string
+    object: string
+    created: number
+    model: string
+    choices: StreamChoice[]
+  }
+
+  type StreamChoice = {
+    index: number
+    delta: StreamDelta
+    finishReason: string | null
+  }
+
+  type StreamDelta = {
+    role?: string
+    content?: string
+    reasoningContent?: string
+  }
 }
