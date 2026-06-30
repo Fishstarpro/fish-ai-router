@@ -2,6 +2,7 @@ package com.yxc.airouter.service;
 
 import com.yxc.airouter.model.dto.chat.ChatRequest;
 import com.yxc.airouter.model.dto.chat.ChatResponse;
+import com.yxc.airouter.model.dto.chat.StreamResponse;
 import reactor.core.publisher.Flux;
 
 public interface ChatService {
@@ -19,5 +20,7 @@ public interface ChatService {
      */
 //    Flux<String> chatStream(ChatRequest chatRequest, Long userId, Long apiKeyId);
 
-    Flux<String> chatStream(ChatRequest chatRequest, Long userId, Long apiKeyId, String clientIp, String userAgent);
+    //Flux<String> chatStream(ChatRequest chatRequest, Long userId, Long apiKeyId, String clientIp, String userAgent);
+
+    Flux<StreamResponse> chatStream(ChatRequest chatRequest, Long userId, Long apiKeyId, String clientIp, String userAgent);
 }

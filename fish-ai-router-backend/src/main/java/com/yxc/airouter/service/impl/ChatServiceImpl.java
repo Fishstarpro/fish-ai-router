@@ -4,10 +4,7 @@ import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
 import com.yxc.airouter.exception.BusinessException;
 import com.yxc.airouter.exception.ErrorCode;
-import com.yxc.airouter.model.dto.chat.ChatMessage;
-import com.yxc.airouter.model.dto.chat.ChatRequest;
-import com.yxc.airouter.model.dto.chat.ChatResponse;
-import com.yxc.airouter.model.dto.chat.StreamChunk;
+import com.yxc.airouter.model.dto.chat.*;
 import com.yxc.airouter.model.dto.log.RequestLogDTO;
 import com.yxc.airouter.model.entity.Model;
 import com.yxc.airouter.model.entity.ModelProvider;
@@ -299,7 +296,7 @@ public class ChatServiceImpl implements ChatService {
         }
     }*/
 
-    @Override
+    /*@Override
     public Flux<String> chatStream(ChatRequest chatRequest, Long userId, Long apiKeyId, String clientIp, String userAgent) {
         try {
             //1.确定路由策略,优先根据指定的策略,如果没有则根据指定的模型
@@ -390,6 +387,147 @@ public class ChatServiceImpl implements ChatService {
                         .build());
             }).doOnError(error -> {
                 String  traceId = IdUtil.simpleUUID();
+                // 流错误时记录日志
+                log.error("流式调用模型失败", error);
+                long duration = System.currentTimeMillis() - startTime;
+                requestLogService.logRequest(RequestLogDTO.builder()
+                        .traceId(traceId)
+                        .userId(userId)
+                        .apiKeyId(apiKeyId)
+                        .modelId(selectedModel.getId())
+                        .requestModel(selectedModel.getModelKey())
+                        .requestType("chat")
+                        .source(apiKeyId != null ? "api" : "web")
+                        .duration((int) duration)
+                        .status("failed")
+                        .errorMessage(error.getMessage())
+                        .errorCode("STREAM_ERROR")
+                        .routingStrategy(strategyType)
+                        .isFallback(false)
+                        .clientIp(clientIp)
+                        .userAgent(userAgent)
+                        .build());
+            });
+        } catch (Exception e) {
+            log.error("流式调用模型失败", e);
+            return Flux.error(new BusinessException(ErrorCode.SYSTEM_ERROR, "流式调用模型失败: " + e.getMessage()));
+        }
+    }*/
+
+    @Override
+    public Flux<StreamResponse> chatStream(ChatRequest chatRequest, Long userId, Long apiKeyId, String clientIp, String userAgent) {
+        try {
+            //1.确定路由策略,优先根据指定的策略,如果没有则根据指定的模型
+            String strategyType = determineStategyType(chatRequest.getRoutingStrategy(), chatRequest.getModel());
+            //2.根据策略获取模型
+            Model selectedModel = routingService.selectModel(strategyType, "chat", chatRequest.getModel());
+
+            if (selectedModel == null) {
+                throw new BusinessException(ErrorCode.SYSTEM_ERROR, "没有可用的模型");
+            }
+            //3.获取提供者
+            ModelProvider provider = modelProviderService.getById(selectedModel.getProviderId());
+            //4.流式调用
+            long startTime = System.currentTimeMillis();
+
+            final int[] promptTokens = {0};
+            final int[] completionTokens = {0};
+            final boolean[] isFirstChunk = {true};
+
+            // 深度思考状态追踪
+            final boolean[] thinkingStarted = {false};
+            final boolean[] thinkingEnded = {false};
+            final boolean isReasoningEnabled = chatRequest.getEnableReasoning() != null && chatRequest.getEnableReasoning();
+
+            String traceId = IdUtil.simpleUUID();
+
+            long created = System.currentTimeMillis() / 1000;
+
+            Flux<StreamChunk> streamChunkFlux = modelInvokeService.invokeStreamChunk(selectedModel, provider, chatRequest);
+
+            return streamChunkFlux.flatMap(chunk -> {
+                //获取token信息
+                if (chunk.getPromptTokens() != null && chunk.getPromptTokens() > 0) {
+                    promptTokens[0] = chunk.getPromptTokens();
+                }
+
+                if (chunk.getCompletionTokens() != null && chunk.getCompletionTokens() > 0) {
+                    completionTokens[0] = chunk.getCompletionTokens();
+                }
+                // 构建 Delta
+                StreamResponse.Delta.DeltaBuilder deltaBuilder = StreamResponse.Delta.builder();
+                // 第一个块包含 role
+                if (isFirstChunk[0]) {
+                    deltaBuilder.role("assistant");
+                    isFirstChunk[0] = false;
+                }
+
+                // 处理普通文本内容
+                if (chunk.hasText()) {
+                    deltaBuilder.content(chunk.getText());
+                }
+
+                // 处理深度思考内容
+                if (chunk.hasReasoningContent()) {
+                    deltaBuilder.reasoningContent(chunk.getReasoningContent());
+                }
+
+                // 如果既没有文本也没有思考内容，跳过
+                if (!chunk.hasText() && !chunk.hasReasoningContent()) {
+                    return Flux.empty();
+                }
+
+                StreamResponse.Delta delta = deltaBuilder.build();
+
+                StreamResponse.StreamChoice choice = StreamResponse.StreamChoice.builder()
+                        .index(0)
+                        .delta(delta)
+                        .finishReason(null)
+                        .build();
+
+                return Flux.just(StreamResponse.builder()
+                        .id(traceId)
+                        .object("chat.completion.chunk")
+                        .created(created)
+                        .model(selectedModel.getModelKey())
+                        .choices(List.of(choice))
+                        .build());
+            }).concatWith(Flux.defer(() -> {
+                        StreamResponse.StreamChoice finishChoice = StreamResponse.StreamChoice.builder()
+                                .index(0)
+                                .delta(StreamResponse.Delta.builder().build())
+                                .finishReason("stop")
+                                .build();
+                        return Flux.just(StreamResponse.builder()
+                                .id(traceId)
+                                .object("chat.completion.chunk")
+                                .created(created)
+                                .model(selectedModel.getModelKey())
+                                .choices(List.of(finishChoice))
+                                .build());
+             })).doOnComplete(() -> {
+                // 流结束时记录日志
+                long duration = System.currentTimeMillis() - startTime;
+                int totalTokens = promptTokens[0] + completionTokens[0];
+                requestLogService.logRequest(RequestLogDTO.builder()
+                        .traceId(traceId)
+                        .userId(userId)
+                        .apiKeyId(apiKeyId)
+                        .modelId(selectedModel.getId())
+                        .requestModel(selectedModel.getModelKey())
+                        .requestType("chat")
+                        .source(apiKeyId != null ? "api" : "web")
+                        .promptTokens(promptTokens[0])
+                        .completionTokens(completionTokens[0])
+                        .totalTokens(totalTokens)
+                        .duration((int) duration)
+                        .status("success")
+                        .routingStrategy(strategyType)
+                        .isFallback(false)
+                        .clientIp(clientIp)
+                        .userAgent(userAgent)
+                        .build());
+            }).doOnError(error -> {
                 // 流错误时记录日志
                 log.error("流式调用模型失败", error);
                 long duration = System.currentTimeMillis() - startTime;
