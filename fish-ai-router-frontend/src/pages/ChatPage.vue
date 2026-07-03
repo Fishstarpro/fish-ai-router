@@ -13,7 +13,7 @@
           <div class="message" :class="msg.role">
             <div class="message-header">
               <strong v-if="msg.role === 'user'">你</strong>
-              <strong v-else>{{ getAIDisplayName() }}</strong>
+              <strong v-else>{{ msg.aiDisplayName || getAIDisplayName() }}</strong>
             </div>
             <!-- AI 回答（可能包含思考内容） -->
             <div v-if="msg.role === 'assistant'" class="message-content">
@@ -247,6 +247,7 @@ interface Message {
   thinking?: string
   answer?: string
   thinkingExpanded?: boolean
+  aiDisplayName?: string
 }
 
 const messages = ref<Message[]>([])
@@ -523,6 +524,7 @@ const streamChat = async (chatRequest: Record<string, unknown>) => {
   const message: Message = {
     role: 'assistant',
     content: assistantContent,
+    aiDisplayName: getAIDisplayName(),  // 记录当时使用的模型名
   }
 
   // 如果有思考内容，添加到消息中

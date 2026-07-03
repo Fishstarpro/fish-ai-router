@@ -25,6 +25,18 @@ declare namespace API {
     message?: string
   }
 
+  type BaseResponseCostStatsVO = {
+    code?: number
+    data?: CostStatsVO
+    message?: string
+  }
+
+  type BaseResponseListMapStringObject = {
+    code?: number
+    data?: Record<string, any>[]
+    message?: string
+  }
+
   type BaseResponseListModelVO = {
     code?: number
     data?: ModelVO[]
@@ -79,6 +91,12 @@ declare namespace API {
     message?: string
   }
 
+  type BaseResponsePageRequestLog = {
+    code?: number
+    data?: PageRequestLog
+    message?: string
+  }
+
   type BaseResponsePageUserVO = {
     code?: number
     data?: PageUserVO
@@ -88,6 +106,18 @@ declare namespace API {
   type BaseResponseProviderVO = {
     code?: number
     data?: ProviderVO
+    message?: string
+  }
+
+  type BaseResponseQuotaVO = {
+    code?: number
+    data?: QuotaVO
+    message?: string
+  }
+
+  type BaseResponseRequestLog = {
+    code?: number
+    data?: RequestLog
     message?: string
   }
 
@@ -112,6 +142,18 @@ declare namespace API {
   type BaseResponseUser = {
     code?: number
     data?: User
+    message?: string
+  }
+
+  type BaseResponseUserAnalysisVO = {
+    code?: number
+    data?: UserAnalysisVO
+    message?: string
+  }
+
+  type BaseResponseUserSummaryStatsVO = {
+    code?: number
+    data?: UserSummaryStatsVO
     message?: string
   }
 
@@ -145,12 +187,34 @@ declare namespace API {
     ip: string
   }
 
+  type CostStatsVO = {
+    totalCost?: number
+    todayCost?: number
+  }
+
   type DeleteRequest = {
     id?: number
   }
 
+  type disableUserParams = {
+    userId: number
+  }
+
+  type enableUserParams = {
+    userId: number
+  }
+
+  type getHistoryDetailParams = {
+    id: number
+  }
+
   type getModelVOByIdParams = {
     id: number
+  }
+
+  type getMyDailyStatsParams = {
+    startDate?: string
+    endDate?: string
   }
 
   type getMyLogsParams = {
@@ -159,6 +223,10 @@ declare namespace API {
 
   type getProviderVOByIdParams = {
     id: number
+  }
+
+  type getUserAnalysisParams = {
+    userId: number
   }
 
   type getUserByIdParams = {
@@ -189,6 +257,9 @@ declare namespace API {
     userAvatar?: string
     userProfile?: string
     userRole?: string
+    userStatus?: string
+    tokenQuota?: number
+    usedTokens?: number
     createTime?: string
     updateTime?: string
   }
@@ -283,6 +354,15 @@ declare namespace API {
     optimizeCountQuery?: boolean
   }
 
+  type PageRequestLog = {
+    records?: RequestLog[]
+    pageNumber?: number
+    pageSize?: number
+    totalPage?: number
+    totalRow?: number
+    optimizeCountQuery?: boolean
+  }
+
   type PageUserVO = {
     records?: UserVO[]
     pageNumber?: number
@@ -337,6 +417,17 @@ declare namespace API {
     updateTime?: string
   }
 
+  type QuotaUpdateRequest = {
+    userId?: number
+    tokenQuota?: number
+  }
+
+  type QuotaVO = {
+    tokenQuota?: number
+    usedTokens?: number
+    remainingQuota?: number
+  }
+
   type RequestLog = {
     id?: number
     traceId?: string
@@ -350,6 +441,7 @@ declare namespace API {
     promptTokens?: number
     completionTokens?: number
     totalTokens?: number
+    cost?: number
     duration?: number
     status?: string
     errorMessage?: string
@@ -360,6 +452,24 @@ declare namespace API {
     userAgent?: string
     createTime?: string
     updateTime?: string
+  }
+
+  type RequestLogQueryRequest = {
+    pageNum?: number
+    pageSize?: number
+    sortField?: string
+    sortOrder?: string
+    userId?: number
+    requestModel?: string
+    requestType?: string
+    source?: string
+    status?: string
+    startDate?: string
+    endDate?: string
+  }
+
+  type resetUserQuotaParams = {
+    userId: number
   }
 
   type TokenStatsVO = {
@@ -374,6 +484,9 @@ declare namespace API {
     userAvatar?: string
     userProfile?: string
     userRole?: string
+    userStatus?: string
+    tokenQuota?: number
+    usedTokens?: number
     editTime?: string
     createTime?: string
     updateTime?: string
@@ -386,6 +499,22 @@ declare namespace API {
     userAvatar?: string
     userProfile?: string
     userRole?: string
+  }
+
+  type UserAnalysisVO = {
+    userId?: number
+    userAccount?: string
+    userName?: string
+    userStatus?: string
+    userRole?: string
+    tokenQuota?: number
+    usedTokens?: number
+    remainingQuota?: number
+    totalRequests?: number
+    successRequests?: number
+    totalTokens?: number
+    totalCost?: number
+    todayCost?: number
   }
 
   type UserLoginRequest = {
@@ -411,12 +540,24 @@ declare namespace API {
     checkPassword?: string
   }
 
+  type UserSummaryStatsVO = {
+    totalTokens?: number
+    tokenQuota?: number
+    usedTokens?: number
+    remainingQuota?: number
+    totalCost?: number
+    todayCost?: number
+    totalRequests?: number
+    successRequests?: number
+  }
+
   type UserUpdateRequest = {
     id?: number
     userName?: string
     userAvatar?: string
     userProfile?: string
     userRole?: string
+    tokenQuota?: number
   }
 
   type UserVO = {
@@ -426,26 +567,9 @@ declare namespace API {
     userAvatar?: string
     userProfile?: string
     userRole?: string
+    userStatus?: string
+    tokenQuota?: number
+    usedTokens?: number
     createTime?: string
-  }
-
-  type StreamResponse = {
-    id: string
-    object: string
-    created: number
-    model: string
-    choices: StreamChoice[]
-  }
-
-  type StreamChoice = {
-    index: number
-    delta: StreamDelta
-    finishReason: string | null
-  }
-
-  type StreamDelta = {
-    role?: string
-    content?: string
-    reasoningContent?: string
   }
 }
