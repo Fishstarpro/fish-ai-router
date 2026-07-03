@@ -21,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -36,6 +37,18 @@ public class ChatServiceImpl implements ChatService {
 
     @Resource
     private RoutingService routingService;
+
+    @Resource
+    private BillingService billingService;
+
+    @Resource
+    private QuotaService quotaService;
+
+    @Resource
+    private UserService userService;
+
+    @Resource
+    private CacheService  cacheService;
 
     /**
      * 最大 Fallback 重试次数
@@ -89,6 +102,44 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     public ChatResponse chat(ChatRequest chatRequest, Long userId, Long apiKeyId, String clientIp, String userAgent) {
+        String traceId = IdUtil.simpleUUID();
+
+        long startTime = System.currentTimeMillis();
+        // 检查用户状态
+        if (userId != null && userService.isUserDisabled(userId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN_ERROR, "账号已被禁用，无法使用服务");
+        }
+        // 检查用户配额
+        if (userId != null && !quotaService.checkQuota(userId)) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "Token配额已用尽，请联系管理员增加配额");
+        }
+        // 尝试从缓存获取响应
+        var cachedResponse = cacheService.getCachedResponse(chatRequest);
+
+        if (cachedResponse.isPresent()) {
+            log.info("命中缓存，直接返回");
+            ChatResponse response = cachedResponse.get();
+            // 记录缓存命中的日志（不扣减配额和费用）
+            long duration = System.currentTimeMillis() - startTime;
+            requestLogService.logRequest(RequestLogDTO.builder()
+                    .traceId(traceId)
+                    .userId(userId)
+                    .apiKeyId(apiKeyId)
+                    .requestModel(chatRequest.getModel() != null ? chatRequest.getModel() : response.getModel())
+                    .requestType("chat")
+                    .source(apiKeyId != null ? "api" : "web")
+                    .promptTokens(0)
+                    .completionTokens(0)
+                    .totalTokens(0)
+                    .duration((int) duration)
+                    .status("success")
+                    .routingStrategy("cache")
+                    .isFallback(false)
+                    .clientIp(clientIp)
+                    .userAgent(userAgent)
+                    .build());
+            return response;
+        }
         //1.确定路由策略,优先根据指定的策略,如果没有则根据指定的模型
         String strategyType = determineStategyType(chatRequest.getRoutingStrategy(), chatRequest.getModel());
         //2.根据策略获取模型
@@ -99,10 +150,6 @@ public class ChatServiceImpl implements ChatService {
         }
         //3.使用带有fallback机制的调用
         List<Model> fallbackModels = routingService.getFallbackModels(strategyType, "chat", chatRequest.getModel());
-
-        String traceId = IdUtil.simpleUUID();
-
-        long startTime = System.currentTimeMillis();
 
         try {
             return invokeModelWithFallback(selectedModel, fallbackModels, chatRequest,
@@ -168,6 +215,14 @@ public class ChatServiceImpl implements ChatService {
             //4.记录调用日志
             long duration = System.currentTimeMillis() - startTime;
 
+            int totalTokens = chatResponse.getUsage().getTotalTokens();
+            //计算费用
+            Integer promptTokens = chatResponse.getUsage().getPromptTokens();
+
+            Integer completionTokens = chatResponse.getUsage().getCompletionTokens();
+
+            BigDecimal cost = billingService.calculateCost(model, promptTokens, completionTokens);
+
             requestLogService.logRequest(RequestLogDTO.builder()
                     .modelId(model.getId())
                     .userId(userId)
@@ -176,16 +231,23 @@ public class ChatServiceImpl implements ChatService {
                     .requestModel(model.getModelKey())
                     .requestType("chat")
                     .source(apiKeyId != null? "api" : "web")
-                    .promptTokens(chatResponse.getUsage().getPromptTokens())
-                    .completionTokens(chatResponse.getUsage().getCompletionTokens())
-                    .totalTokens(chatResponse.getUsage().getTotalTokens())
+                    .promptTokens(promptTokens)
+                    .completionTokens(completionTokens)
+                    .totalTokens(totalTokens)
                     .duration((int) duration)
                     .status("success")
                     .routingStrategy(strategyType)
                     .isFallback(isFallback)
                     .clientIp(clientIp)
                     .userAgent(userAgent)
+                    .cost(cost)
                     .build());
+            // 扣减用户配额
+            if (userId != null && totalTokens > 0) {
+                quotaService.deductTokens(userId, totalTokens);
+            }
+            // 缓存响应
+            cacheService.cacheResponse(chatRequest, chatResponse);
 
             return chatResponse;
         } catch (Exception e) {
@@ -416,6 +478,15 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     public Flux<StreamResponse> chatStream(ChatRequest chatRequest, Long userId, Long apiKeyId, String clientIp, String userAgent) {
+        // 检查用户状态
+        if (userId != null && userService.isUserDisabled(userId)) {
+            return Flux.error(new BusinessException(ErrorCode.FORBIDDEN_ERROR, "账号已被禁用，无法使用服务"));
+        }
+
+        // 检查用户配额
+        if (userId != null && !quotaService.checkQuota(userId)) {
+            return Flux.error(new BusinessException(ErrorCode.OPERATION_ERROR, "Token配额已用尽，请联系管理员增加配额"));
+        }
         try {
             //1.确定路由策略,优先根据指定的策略,如果没有则根据指定的模型
             String strategyType = determineStategyType(chatRequest.getRoutingStrategy(), chatRequest.getModel());
@@ -461,20 +532,17 @@ public class ChatServiceImpl implements ChatService {
                     deltaBuilder.role("assistant");
                     isFirstChunk[0] = false;
                 }
-
+                // 如果既没有文本也没有思考内容，跳过
+                if (!chunk.hasText() && !chunk.hasReasoningContent()) {
+                    return Flux.empty();
+                }
                 // 处理普通文本内容
                 if (chunk.hasText()) {
                     deltaBuilder.content(chunk.getText());
                 }
-
                 // 处理深度思考内容
                 if (chunk.hasReasoningContent()) {
                     deltaBuilder.reasoningContent(chunk.getReasoningContent());
-                }
-
-                // 如果既没有文本也没有思考内容，跳过
-                if (!chunk.hasText() && !chunk.hasReasoningContent()) {
-                    return Flux.empty();
                 }
 
                 StreamResponse.Delta delta = deltaBuilder.build();
@@ -506,9 +574,13 @@ public class ChatServiceImpl implements ChatService {
                                 .choices(List.of(finishChoice))
                                 .build());
              })).doOnComplete(() -> {
+                // 计算费用
+                BigDecimal cost = billingService.calculateCost(selectedModel, promptTokens[0], completionTokens[0]);
                 // 流结束时记录日志
                 long duration = System.currentTimeMillis() - startTime;
+
                 int totalTokens = promptTokens[0] + completionTokens[0];
+
                 requestLogService.logRequest(RequestLogDTO.builder()
                         .traceId(traceId)
                         .userId(userId)
@@ -526,7 +598,10 @@ public class ChatServiceImpl implements ChatService {
                         .isFallback(false)
                         .clientIp(clientIp)
                         .userAgent(userAgent)
+                        .cost(cost)
                         .build());
+                //扣减用户配额
+                quotaService.deductTokens(userId, totalTokens);
             }).doOnError(error -> {
                 // 流错误时记录日志
                 log.error("流式调用模型失败", error);
@@ -602,6 +677,7 @@ public class ChatServiceImpl implements ChatService {
                 .build();
 
         return ChatResponse.builder()
+                .model(modelName)
                 .id(IdUtil.simpleUUID())
                 .object("chat.completion")
                 .created(System.currentTimeMillis() / 1000)

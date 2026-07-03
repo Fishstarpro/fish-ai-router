@@ -42,6 +42,21 @@ public class LoginUserVO implements Serializable {
     private String userRole;
 
     /**
+     * 用户状态：active/disabled
+     */
+    private String userStatus;
+
+    /**
+     * Token配额（-1表示无限制）
+     */
+    private Long tokenQuota;
+
+    /**
+     * 已使用Token数
+     */
+    private Long usedTokens;
+
+    /**
      * 创建时间
      */
     private LocalDateTime createTime;

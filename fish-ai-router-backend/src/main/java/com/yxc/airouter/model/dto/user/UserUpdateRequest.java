@@ -35,5 +35,10 @@ public class UserUpdateRequest implements Serializable {
      */
     private String userRole;
 
+    /**
+     * Token配额（-1表示无限制）
+     */
+    private Long tokenQuota;
+
     private static final long serialVersionUID = 1L;
 }
