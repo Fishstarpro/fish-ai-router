@@ -13,9 +13,21 @@ declare namespace API {
     createTime?: string
   }
 
+  type BalanceVO = {
+    balance?: number
+    totalSpending?: number
+    totalRecharge?: number
+  }
+
   type BaseResponseApiKeyVO = {
     code?: number
     data?: ApiKeyVO
+    message?: string
+  }
+
+  type BaseResponseBalanceVO = {
+    code?: number
+    data?: BalanceVO
     message?: string
   }
 
@@ -28,6 +40,12 @@ declare namespace API {
   type BaseResponseCostStatsVO = {
     code?: number
     data?: CostStatsVO
+    message?: string
+  }
+
+  type BaseResponseCreateRechargeResponse = {
+    code?: number
+    data?: CreateRechargeResponse
     message?: string
   }
 
@@ -79,6 +97,12 @@ declare namespace API {
     message?: string
   }
 
+  type BaseResponsePageBillingRecord = {
+    code?: number
+    data?: PageBillingRecord
+    message?: string
+  }
+
   type BaseResponsePageModelVO = {
     code?: number
     data?: PageModelVO
@@ -88,6 +112,12 @@ declare namespace API {
   type BaseResponsePageProviderVO = {
     code?: number
     data?: PageProviderVO
+    message?: string
+  }
+
+  type BaseResponsePageRechargeRecord = {
+    code?: number
+    data?: PageRechargeRecord
     message?: string
   }
 
@@ -163,6 +193,18 @@ declare namespace API {
     message?: string
   }
 
+  type BillingRecord = {
+    id?: number
+    userId?: number
+    requestLogId?: number
+    amount?: number
+    balanceBefore?: number
+    balanceAfter?: number
+    description?: string
+    billingType?: string
+    createTime?: string
+  }
+
   type BlacklistRequest = {
     ip?: string
     reason?: string
@@ -192,6 +234,15 @@ declare namespace API {
     todayCost?: number
   }
 
+  type CreateRechargeRequest = {
+    amount?: number
+  }
+
+  type CreateRechargeResponse = {
+    checkoutUrl?: string
+    sessionId?: string
+  }
+
   type DeleteRequest = {
     id?: number
   }
@@ -212,6 +263,11 @@ declare namespace API {
     id: number
   }
 
+  type getMyBillingRecordsParams = {
+    pageNum?: number
+    pageSize?: number
+  }
+
   type getMyDailyStatsParams = {
     startDate?: string
     endDate?: string
@@ -219,6 +275,11 @@ declare namespace API {
 
   type getMyLogsParams = {
     limit?: number
+  }
+
+  type getMyRechargeRecordsParams = {
+    pageNum?: number
+    pageSize?: number
   }
 
   type getProviderVOByIdParams = {
@@ -336,6 +397,15 @@ declare namespace API {
     optimizeCountQuery?: boolean
   }
 
+  type PageBillingRecord = {
+    records?: BillingRecord[]
+    pageNumber?: number
+    pageSize?: number
+    totalPage?: number
+    totalRow?: number
+    optimizeCountQuery?: boolean
+  }
+
   type PageModelVO = {
     records?: ModelVO[]
     pageNumber?: number
@@ -347,6 +417,15 @@ declare namespace API {
 
   type PageProviderVO = {
     records?: ProviderVO[]
+    pageNumber?: number
+    pageSize?: number
+    totalPage?: number
+    totalRow?: number
+    optimizeCountQuery?: boolean
+  }
+
+  type PageRechargeRecord = {
+    records?: RechargeRecord[]
     pageNumber?: number
     pageSize?: number
     totalPage?: number
@@ -428,6 +507,18 @@ declare namespace API {
     remainingQuota?: number
   }
 
+  type RechargeRecord = {
+    id?: number
+    userId?: number
+    amount?: number
+    paymentMethod?: string
+    paymentId?: string
+    status?: string
+    description?: string
+    createTime?: string
+    updateTime?: string
+  }
+
   type RequestLog = {
     id?: number
     traceId?: string
@@ -472,6 +563,10 @@ declare namespace API {
     userId: number
   }
 
+  type stripeSuccessParams = {
+    session_id: string
+  }
+
   type TokenStatsVO = {
     totalTokens?: number
   }
@@ -487,6 +582,7 @@ declare namespace API {
     userStatus?: string
     tokenQuota?: number
     usedTokens?: number
+    balance?: number
     editTime?: string
     createTime?: string
     updateTime?: string
@@ -570,6 +666,7 @@ declare namespace API {
     userStatus?: string
     tokenQuota?: number
     usedTokens?: number
+    balance?: number
     createTime?: string
   }
 }
