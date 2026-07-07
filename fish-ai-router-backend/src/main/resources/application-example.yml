@@ -54,3 +54,9 @@ knife4j:
   enable: true
   setting:
     language: zh_cn
+
+stripe:
+  api-key: sk_test_YOUR_TEST_KEY  # 替换为你的测试密钥
+  webhook-secret: whsec_YOUR_WEBHOOK_SECRET  # Webhook 签名密钥
+  success-url: http://localhost:5173/recharge/success
+  cancel-url: http://localhost:5173/recharge/cancel

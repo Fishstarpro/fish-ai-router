@@ -151,7 +151,12 @@
             <artifactId>okhttp</artifactId>
             <version>4.12.0</version>
         </dependency>
-
+        <!-- Stripe 支付 SDK -->
+        <dependency>
+            <groupId>com.stripe</groupId>
+            <artifactId>stripe-java</artifactId>
+            <version>31.2.0</version>
+        </dependency>
     </dependencies>
 
     <build>

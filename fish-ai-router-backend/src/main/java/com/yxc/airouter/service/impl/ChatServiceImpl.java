@@ -50,6 +50,9 @@ public class ChatServiceImpl implements ChatService {
     @Resource
     private CacheService  cacheService;
 
+    @Resource
+    private BalanceService balanceService;
+
     /**
      * 最大 Fallback 重试次数
      */
@@ -600,8 +603,16 @@ public class ChatServiceImpl implements ChatService {
                         .userAgent(userAgent)
                         .cost(cost)
                         .build());
-                //扣减用户配额
-                quotaService.deductTokens(userId, totalTokens);
+                //扣减用户配额和余额
+                if (userId != null && totalTokens > 0) {
+                    quotaService.deductTokens(userId, totalTokens);
+
+                    if (cost.compareTo(BigDecimal.ZERO) > 0) {
+                        String description = apiKeyId != null? "API调用消费: " + selectedModel.getModelKey() : "网页端调用消费: " + selectedModel.getModelKey();
+
+                        balanceService.deductBalance(userId, cost, null, description);
+                    }
+                }
             }).doOnError(error -> {
                 // 流错误时记录日志
                 log.error("流式调用模型失败", error);

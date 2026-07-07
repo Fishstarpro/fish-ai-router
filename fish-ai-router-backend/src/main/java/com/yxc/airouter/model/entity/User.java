@@ -12,6 +12,7 @@ import lombok.NoArgsConstructor;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -83,6 +84,12 @@ public class User implements Serializable {
      */
     @Column("usedTokens")
     private Long usedTokens;
+
+    /**
+     * 账户余额（元）
+     */
+    @Column("balance")
+    private BigDecimal balance;
 
     /**
      * 编辑时间
