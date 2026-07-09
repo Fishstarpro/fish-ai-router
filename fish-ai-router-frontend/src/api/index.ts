@@ -3,6 +3,7 @@
 // API 更新时间：
 // API 唯一标识：
 import * as stripeWebhookController from './stripeWebhookController'
+import * as imageController from './imageController'
 import * as chatController from './chatController'
 import * as userController from './userController'
 import * as statsController from './statsController'
@@ -16,6 +17,7 @@ import * as healthController from './healthController'
 import * as balanceController from './balanceController'
 export default {
   stripeWebhookController,
+  imageController,
   chatController,
   userController,
   statsController,

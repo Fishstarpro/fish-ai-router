@@ -103,6 +103,12 @@ declare namespace API {
     message?: string
   }
 
+  type BaseResponsePageImageGenerationRecord = {
+    code?: number
+    data?: PageImageGenerationRecord
+    message?: string
+  }
+
   type BaseResponsePageModelVO = {
     code?: number
     data?: PageModelVO
@@ -282,6 +288,11 @@ declare namespace API {
     pageSize?: number
   }
 
+  type getMyRecordsParams = {
+    pageNum?: number
+    pageSize?: number
+  }
+
   type getProviderVOByIdParams = {
     id: number
   }
@@ -296,6 +307,47 @@ declare namespace API {
 
   type getUserVOByIdParams = {
     id: number
+  }
+
+  type ImageData = {
+    url?: string
+    b64Json?: string
+    revisedPrompt?: string
+  }
+
+  type ImageGenerationRecord = {
+    id?: number
+    userId?: number
+    apiKeyId?: number
+    modelId?: number
+    modelKey?: string
+    prompt?: string
+    revisedPrompt?: string
+    imageUrl?: string
+    imageData?: string
+    size?: string
+    quality?: string
+    status?: string
+    cost?: number
+    duration?: number
+    errorMessage?: string
+    clientIp?: string
+    createTime?: string
+  }
+
+  type ImageGenerationRequest = {
+    prompt?: string
+    model?: string
+    size?: string
+    quality?: string
+    user?: string
+    n?: number
+    response_format?: string
+  }
+
+  type ImageGenerationResponse = {
+    created?: number
+    data?: ImageData[]
   }
 
   type listActiveModelsByProviderParams = {
@@ -399,6 +451,15 @@ declare namespace API {
 
   type PageBillingRecord = {
     records?: BillingRecord[]
+    pageNumber?: number
+    pageSize?: number
+    totalPage?: number
+    totalRow?: number
+    optimizeCountQuery?: boolean
+  }
+
+  type PageImageGenerationRecord = {
+    records?: ImageGenerationRecord[]
     pageNumber?: number
     pageSize?: number
     totalPage?: number
