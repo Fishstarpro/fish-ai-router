@@ -1,22 +1,23 @@
-package com.yxc.airouter.enums;
+package com.yxc.airouter.model.enums;
 
 import lombok.Getter;
 
 /**
- * 模型状态枚举
+ * 模型类型枚举
  *
  */
 @Getter
-public enum ModelStatusEnum {
+public enum ModelTypeEnum {
 
-    ACTIVE("active", "启用"),
-    INACTIVE("inactive", "禁用"),
-    DEPRECATED("deprecated", "已废弃");
+    CHAT("chat", "对话模型"),
+    EMBEDDING("embedding", "向量模型"),
+    IMAGE("image", "图像模型"),
+    AUDIO("audio", "音频模型");
 
     private final String value;
     private final String text;
 
-    ModelStatusEnum(String value, String text) {
+    ModelTypeEnum(String value, String text) {
         this.value = value;
         this.text = text;
     }
@@ -24,11 +25,11 @@ public enum ModelStatusEnum {
     /**
      * 根据 value 获取枚举
      */
-    public static ModelStatusEnum getEnumByValue(String value) {
+    public static ModelTypeEnum getEnumByValue(String value) {
         if (value == null) {
             return null;
         }
-        for (ModelStatusEnum anEnum : ModelStatusEnum.values()) {
+        for (ModelTypeEnum anEnum : ModelTypeEnum.values()) {
             if (anEnum.value.equals(value)) {
                 return anEnum;
             }

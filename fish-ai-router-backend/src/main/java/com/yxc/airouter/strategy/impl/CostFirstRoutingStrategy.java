@@ -2,9 +2,9 @@ package com.yxc.airouter.strategy.impl;
 
 import cn.hutool.core.util.StrUtil;
 import com.mybatisflex.core.query.QueryWrapper;
-import com.yxc.airouter.enums.HealthStatusEnum;
-import com.yxc.airouter.enums.ModelStatusEnum;
-import com.yxc.airouter.enums.RoutingStrategyTypeEnum;
+import com.yxc.airouter.model.enums.HealthStatusEnum;
+import com.yxc.airouter.model.enums.ModelStatusEnum;
+import com.yxc.airouter.model.enums.RoutingStrategyTypeEnum;
 import com.yxc.airouter.model.entity.Model;
 import com.yxc.airouter.service.ModelService;
 import com.yxc.airouter.strategy.RoutingStrategyInterface;

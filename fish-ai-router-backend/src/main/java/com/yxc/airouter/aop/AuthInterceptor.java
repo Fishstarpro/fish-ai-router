@@ -1,7 +1,7 @@
 package com.yxc.airouter.aop;
 
 import com.yxc.airouter.annotation.AuthCheck;
-import com.yxc.airouter.enums.UserRoleEnum;
+import com.yxc.airouter.model.enums.UserRoleEnum;
 import com.yxc.airouter.exception.BusinessException;
 import com.yxc.airouter.exception.ErrorCode;
 import com.yxc.airouter.model.entity.User;

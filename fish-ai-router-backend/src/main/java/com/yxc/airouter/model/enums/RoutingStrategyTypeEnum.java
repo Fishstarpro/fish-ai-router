@@ -1,4 +1,4 @@
-package com.yxc.airouter.enums;
+package com.yxc.airouter.model.enums;
 
 import lombok.Getter;
 

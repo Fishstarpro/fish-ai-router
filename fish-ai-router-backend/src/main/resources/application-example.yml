@@ -60,3 +60,7 @@ stripe:
   webhook-secret: whsec_YOUR_WEBHOOK_SECRET  # Webhook 签名密钥
   success-url: http://localhost:5173/recharge/success
   cancel-url: http://localhost:5173/recharge/cancel
+
+plugin:
+  serpapi:
+    api-key:

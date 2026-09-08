@@ -8,7 +8,7 @@ import com.yxc.airouter.common.BaseResponse;
 import com.yxc.airouter.common.DeleteRequest;
 import com.yxc.airouter.common.ResultUtils;
 import com.yxc.airouter.constant.UserConstant;
-import com.yxc.airouter.enums.ModelStatusEnum;
+import com.yxc.airouter.model.enums.ModelStatusEnum;
 import com.yxc.airouter.exception.ErrorCode;
 import com.yxc.airouter.exception.ThrowUtils;
 import com.yxc.airouter.model.dto.model.ModelAddRequest;

@@ -6,7 +6,7 @@ import cn.hutool.core.util.StrUtil;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.core.update.UpdateChain;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
-import com.yxc.airouter.enums.ModelStatusEnum;
+import com.yxc.airouter.model.enums.ModelStatusEnum;
 import com.yxc.airouter.mapper.ModelMapper;
 import com.yxc.airouter.model.dto.model.ModelQueryRequest;
 import com.yxc.airouter.model.entity.Model;
