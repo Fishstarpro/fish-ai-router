@@ -13,6 +13,7 @@ import CallHistoryPage from '@/pages/user/CallHistoryPage.vue'
 import RechargeSuccessPage from '@/pages/user/RechargeSuccessPage.vue'
 import RechargeCancelPage from '@/pages/user/RechargeCancelPage.vue'
 import ImageGenerationPage from '@/pages/ImageGenerationPage.vue'
+import PluginManagePage from '@/pages/admin/PluginManagePage.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -86,6 +87,11 @@ const router = createRouter({
       path: '/recharge/cancel',
       name: '充值取消',
       component: RechargeCancelPage,
+    },
+    {
+      path: '/admin/pluginManage',
+      name: '插件管理',
+      component: PluginManagePage,
     },
   ],
 })

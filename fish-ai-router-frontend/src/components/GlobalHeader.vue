@@ -65,7 +65,8 @@ import {
   CloudServerOutlined,
   StopOutlined,
   HistoryOutlined,
-  PictureOutlined
+  PictureOutlined,
+  ApiOutlined
 } from '@ant-design/icons-vue'
 
 const loginUserStore = useLoginUserStore()
@@ -131,6 +132,12 @@ const originItems = [
     icon: () => h(StopOutlined),
     label: '黑名单管理',
     title: '黑名单管理',
+  },
+  {
+    key: '/admin/pluginManage',
+    icon: () => h(ApiOutlined),
+    label: '插件管理',
+    title: '插件管理',
   },
 ]
 

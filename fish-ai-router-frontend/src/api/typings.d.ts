@@ -61,6 +61,12 @@ declare namespace API {
     message?: string
   }
 
+  type BaseResponseListPluginConfigVO = {
+    code?: number
+    data?: PluginConfigVO[]
+    message?: string
+  }
+
   type BaseResponseListProviderVO = {
     code?: number
     data?: ProviderVO[]
@@ -136,6 +142,18 @@ declare namespace API {
   type BaseResponsePageUserVO = {
     code?: number
     data?: PageUserVO
+    message?: string
+  }
+
+  type BaseResponsePluginConfigVO = {
+    code?: number
+    data?: PluginConfigVO
+    message?: string
+  }
+
+  type BaseResponsePluginExecuteVO = {
+    code?: number
+    data?: PluginExecuteVO
     message?: string
   }
 
@@ -253,8 +271,16 @@ declare namespace API {
     id?: number
   }
 
+  type disablePluginParams = {
+    pluginKey: string
+  }
+
   type disableUserParams = {
     userId: number
+  }
+
+  type enablePluginParams = {
+    pluginKey: string
   }
 
   type enableUserParams = {
@@ -291,6 +317,10 @@ declare namespace API {
   type getMyRecordsParams = {
     pageNum?: number
     pageSize?: number
+  }
+
+  type getPluginParams = {
+    pluginKey: string
   }
 
   type getProviderVOByIdParams = {
@@ -512,6 +542,46 @@ declare namespace API {
     optimizeCountQuery?: boolean
   }
 
+  type PluginConfigVO = {
+    id?: number
+    pluginKey?: string
+    pluginName?: string
+    pluginType?: string
+    description?: string
+    config?: string
+    status?: string
+    priority?: number
+    createTime?: string
+    updateTime?: string
+  }
+
+  type PluginExecuteRequest = {
+    pluginKey?: string
+    input?: string
+    fileUrl?: string
+    fileType?: string
+    params?: Record<string, any>
+    fileBytes?: string
+  }
+
+  type PluginExecuteVO = {
+    success?: boolean
+    pluginKey?: string
+    content?: string
+    errorMessage?: string
+    duration?: number
+    data?: Record<string, any>
+  }
+
+  type PluginUpdateRequest = {
+    id?: number
+    pluginName?: string
+    description?: string
+    config?: string
+    status?: string
+    priority?: number
+  }
+
   type ProviderAddRequest = {
     providerName?: string
     displayName?: string
@@ -578,6 +648,10 @@ declare namespace API {
     description?: string
     createTime?: string
     updateTime?: string
+  }
+
+  type reloadPluginParams = {
+    pluginKey: string
   }
 
   type RequestLog = {

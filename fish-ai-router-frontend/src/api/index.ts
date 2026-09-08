@@ -9,6 +9,7 @@ import * as userController from './userController'
 import * as statsController from './statsController'
 import * as rechargeController from './rechargeController'
 import * as modelProviderController from './modelProviderController'
+import * as pluginController from './pluginController'
 import * as modelController from './modelController'
 import * as internalChatController from './internalChatController'
 import * as apiKeyController from './apiKeyController'
@@ -23,6 +24,7 @@ export default {
   statsController,
   rechargeController,
   modelProviderController,
+  pluginController,
   modelController,
   internalChatController,
   apiKeyController,
