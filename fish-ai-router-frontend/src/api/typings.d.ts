@@ -79,6 +79,12 @@ declare namespace API {
     message?: string
   }
 
+  type BaseResponseListUserProviderKeyVO = {
+    code?: number
+    data?: UserProviderKeyVO[]
+    message?: string
+  }
+
   type BaseResponseLoginUserVO = {
     code?: number
     data?: LoginUserVO
@@ -234,6 +240,15 @@ declare namespace API {
     reason?: string
   }
 
+  type chatCompletionsWithFileParams = {
+    model?: string
+    messages: string
+    stream?: boolean
+    routing_strategy?: string
+    plugin_key?: string
+    enable_reasoning?: boolean
+  }
+
   type ChatMessage = {
     role?: string
     content?: string
@@ -247,6 +262,9 @@ declare namespace API {
     max_tokens?: number
     enable_reasoning?: boolean
     routing_strategy?: string
+    plugin_key?: string
+    file_url?: string
+    file_type?: string
   }
 
   type checkBlacklistParams = {
@@ -751,6 +769,27 @@ declare namespace API {
   type UserLoginRequest = {
     userAccount?: string
     userPassword?: string
+  }
+
+  type UserProviderKeyAddRequest = {
+    providerId?: number
+    apiKey?: string
+  }
+
+  type UserProviderKeyUpdateRequest = {
+    id?: number
+    apiKey?: string
+    status?: string
+  }
+
+  type UserProviderKeyVO = {
+    id?: number
+    providerId?: number
+    providerName?: string
+    apiKey?: string
+    status?: string
+    createTime?: string
+    updateTime?: string
   }
 
   type UserQueryRequest = {

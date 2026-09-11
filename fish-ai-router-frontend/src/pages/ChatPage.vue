@@ -9,12 +9,16 @@
           <p>选择一个模型，然后输入您的问题</p>
         </div>
 
-        <div v-for="(msg, index) in messages" :key="index" class="message-wrapper">
+        <div v-for="(msg, index) in messages" :key="index" class="message-wrapper" :class="msg.role">
+          <!-- 角色标签 -->
+          <div v-if="msg.role === 'assistant'" class="role-label assistant-label">
+            <span>{{ getAIDisplayName() }}</span>
+          </div>
+          <div v-else class="role-label user-label">
+            <span>你</span>
+          </div>
+
           <div class="message" :class="msg.role">
-            <div class="message-header">
-              <strong v-if="msg.role === 'user'">你</strong>
-              <strong v-else>{{ msg.aiDisplayName || getAIDisplayName() }}</strong>
-            </div>
             <!-- AI 回答（可能包含思考内容） -->
             <div v-if="msg.role === 'assistant'" class="message-content">
               <div v-if="msg.thinking" class="thinking-section">
@@ -27,16 +31,33 @@
               <div class="answer-text" v-html="renderMarkdown(msg.answer || msg.content)"></div>
             </div>
             <!-- 用户消息 -->
-            <div v-else class="message-content" v-html="renderMarkdown(msg.content)"></div>
+            <div v-else class="message-content">
+              <!-- 图片缩略图 -->
+              <div v-if="msg.file && msg.file.type.startsWith('image/') && msg.filePreviewUrl" class="image-preview">
+                <img :src="msg.filePreviewUrl" :alt="msg.file.name" class="image-thumbnail" />
+                <div class="image-info">
+                  <PictureOutlined style="font-size: 14px; color: rgba(255,255,255,0.85)" />
+                  <span class="image-name">{{ msg.file.name }}</span>
+                  <span class="image-size">({{ formatFileSize(msg.file.size) }})</span>
+                </div>
+              </div>
+              <!-- PDF 文件信息 -->
+              <div v-else-if="msg.file" class="message-file">
+                <FilePdfOutlined style="font-size: 16px; color: #ff7a45" />
+                <span class="file-name">{{ msg.file.name }}</span>
+                <span class="file-size">({{ formatFileSize(msg.file.size) }})</span>
+              </div>
+              <div v-html="renderMarkdown(msg.content)"></div>
+            </div>
           </div>
         </div>
 
         <!-- 流式响应中的消息 -->
-        <div v-if="streamingContent || streamingThinking" class="message-wrapper">
+        <div v-if="streamingContent || streamingThinking" class="message-wrapper assistant">
+          <div class="role-label assistant-label">
+            <span>{{ getAIDisplayName() }}</span>
+          </div>
           <div class="message assistant">
-            <div class="message-header">
-              <strong>{{ getAIDisplayName() }}</strong>
-            </div>
             <div class="message-content">
               <!-- 思考内容（如果有） -->
               <div v-if="streamingThinking" class="thinking-section">
@@ -52,13 +73,13 @@
         </div>
 
         <!-- 加载中提示 -->
-        <div v-if="loading && !streamingContent" class="message-wrapper">
+        <div v-if="loading && !streamingContent" class="message-wrapper assistant">
+          <div class="role-label assistant-label">
+            <span>{{ getAIDisplayName() }}</span>
+          </div>
           <div class="message assistant">
-            <div class="message-header">
-              <strong>{{ getAIDisplayName() }}</strong>
-            </div>
-            <div class="message-content">
-              <a-spin /> 思考中...
+            <div class="message-content loading-message">
+              <a-spin /> <span>思考中...</span>
             </div>
           </div>
         </div>
@@ -114,15 +135,70 @@
             <span class="reasoning-label">深度思考</span>
             <a-switch v-model:checked="enableReasoning" />
           </div>
+
+          <!-- 联网搜索开关 -->
+          <div class="plugin-switch">
+            <GlobalOutlined class="plugin-icon" />
+            <span class="plugin-label">联网搜索</span>
+            <a-switch v-model:checked="enableWebSearch" />
+          </div>
+
+          <!-- PDF 解析按钮 -->
+          <a-button
+            size="large"
+            :type="selectedPluginKey === 'pdf_parser' ? 'primary' : 'default'"
+            @click="togglePlugin('pdf_parser')"
+            class="plugin-button"
+          >
+            <FilePdfOutlined />
+            PDF 解析
+          </a-button>
+
+          <!-- 图片识别按钮 -->
+          <a-button
+            size="large"
+            :type="selectedPluginKey === 'image_recognition' ? 'primary' : 'default'"
+            @click="togglePlugin('image_recognition')"
+            class="plugin-button"
+          >
+            <PictureOutlined />
+            图片识别
+          </a-button>
+        </div>
+
+        <!-- 文件信息显示（在输入框上方） -->
+        <div v-if="uploadedFile" class="file-info-bar">
+          <!-- 图片预览 -->
+          <div v-if="uploadedFile.type.startsWith('image/') && uploadedFilePreviewUrl" class="file-preview-container">
+            <img :src="uploadedFilePreviewUrl" :alt="uploadedFile.name" class="file-preview-image" />
+            <div class="file-info">
+              <a-space>
+                <PictureOutlined style="font-size: 16px; color: #52c41a" />
+                <span class="file-name">{{ uploadedFile.name }}</span>
+                <span class="file-size">{{ formatFileSize(uploadedFile.size) }}</span>
+                <DeleteOutlined class="delete-icon" @click="clearFile" />
+              </a-space>
+            </div>
+          </div>
+          <!-- PDF 文件信息 -->
+          <div v-else>
+            <a-space>
+              <FilePdfOutlined style="font-size: 18px; color: #ff7a45" />
+              <span class="file-name">{{ uploadedFile.name }}</span>
+              <span class="file-size">{{ formatFileSize(uploadedFile.size) }}</span>
+              <DeleteOutlined class="delete-icon" @click="clearFile" />
+            </a-space>
+          </div>
         </div>
 
         <div class="input-wrapper">
           <a-textarea
             v-model:value="inputMessage"
-            :placeholder="canSendMessage ? '输入您的问题...' : '请先选择一个模型'"
+            :placeholder="getInputPlaceholder()"
             :auto-size="{ minRows: 2, maxRows: 6 }"
             :disabled="!canSendMessage || loading"
             @pressEnter="handleEnter"
+            @paste="handlePaste"
             class="chat-input"
           />
           <div class="input-actions">
@@ -222,9 +298,19 @@
 <script lang="ts" setup>
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { listActiveModels } from '@/api/modelController'
+import { listEnabledPlugins } from '@/api/pluginController'
 import { message } from 'ant-design-vue'
 import { marked } from 'marked'
-import { AppstoreOutlined, DownOutlined, BulbOutlined, ThunderboltOutlined } from '@ant-design/icons-vue'
+import {
+  AppstoreOutlined,
+  DownOutlined,
+  BulbOutlined,
+  ThunderboltOutlined,
+  GlobalOutlined,
+  FilePdfOutlined,
+  PictureOutlined,
+  DeleteOutlined,
+} from '@ant-design/icons-vue'
 
 // 路由策略选项
 const routingStrategyOptions = [
@@ -247,7 +333,13 @@ interface Message {
   thinking?: string
   answer?: string
   thinkingExpanded?: boolean
-  aiDisplayName?: string
+  file?: {
+    name: string
+    size: number
+    type: string
+  }
+  filePreviewUrl?: string
+  pluginKey?: string
 }
 
 const messages = ref<Message[]>([])
@@ -262,6 +354,15 @@ const enableReasoning = ref<boolean>(false)
 
 // 路由策略
 const routingStrategy = ref<'auto' | 'cost_first' | 'latency_first' | 'fixed'>('auto')
+
+// 插件相关
+const enabledPlugins = ref<API.PluginConfigVO[]>([])
+const enableWebSearch = ref(false)
+const selectedPluginKey = ref<string>('')
+
+// 文件上传
+const uploadedFile = ref<File | null>(null)
+const uploadedFilePreviewUrl = ref<string>('')
 
 // 计算不同类别的模型
 const fastModels = computed(() => {
@@ -299,6 +400,148 @@ const loadModels = async () => {
     message.error('加载模型列表失败')
   }
 }
+
+// 加载启用的插件列表
+const loadEnabledPlugins = async () => {
+  try {
+    const res = await listEnabledPlugins()
+    if (res.data.code === 0 && res.data.data) {
+      enabledPlugins.value = res.data.data
+    }
+  } catch (err) {
+    console.error('加载插件列表失败', err)
+  }
+}
+
+// 切换插件（PDF 解析 / 图片识别）
+const togglePlugin = (pluginKey: string) => {
+  if (selectedPluginKey.value === pluginKey) {
+    // 如果已选中，则取消
+    selectedPluginKey.value = ''
+    clearFile()
+  } else {
+    // 选中新插件（互斥，关闭联网搜索）
+    enableWebSearch.value = false
+    selectedPluginKey.value = pluginKey
+    // 如果已有文件，检查是否匹配
+    if (uploadedFile.value) {
+      const isValid = validateFileForPlugin(uploadedFile.value, pluginKey)
+      if (!isValid) {
+        clearFile()
+      }
+    }
+  }
+}
+
+// 监听联网搜索开关变化
+watch(enableWebSearch, (newValue) => {
+  if (newValue) {
+    // 启用联网搜索时，关闭其他插件
+    selectedPluginKey.value = ''
+    clearFile()
+  }
+})
+
+// 处理粘贴事件
+const handlePaste = (e: ClipboardEvent) => {
+  const items = e.clipboardData?.items
+  if (!items) return
+
+  // 只有选择了 PDF 解析或图片识别才能粘贴文件
+  if (!selectedPluginKey.value || selectedPluginKey.value === 'web_search') {
+    return
+  }
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i]
+
+    // 检查是否是文件
+    if (item.kind === 'file') {
+      e.preventDefault()
+      const file = item.getAsFile()
+      if (file) {
+        handleFileSelect(file)
+      }
+      break
+    }
+  }
+}
+
+// 处理文件选择
+const handleFileSelect = (file: File) => {
+  // 验证文件
+  if (!validateFileForPlugin(file, selectedPluginKey.value)) {
+    return
+  }
+
+  // 检查文件大小（10MB）
+  const isLt10M = file.size / 1024 / 1024 < 10
+  if (!isLt10M) {
+    message.error('文件大小不能超过 10MB')
+    return
+  }
+
+  uploadedFile.value = file
+
+  // 如果是图片，生成预览 URL
+  if (file.type.startsWith('image/')) {
+    uploadedFilePreviewUrl.value = URL.createObjectURL(file)
+  }
+
+  message.success(`文件已添加: ${file.name}`)
+}
+
+// 验证文件是否匹配插件
+const validateFileForPlugin = (file: File, pluginKey: string): boolean => {
+  const isImage = file.type.startsWith('image/')
+  const isPdf = file.type === 'application/pdf'
+
+  if (pluginKey === 'pdf_parser') {
+    if (!isPdf) {
+      message.error('PDF 解析只能上传 PDF 文件')
+      return false
+    }
+  } else if (pluginKey === 'image_recognition') {
+    if (!isImage) {
+      message.error('图片识别只能上传图片文件')
+      return false
+    }
+  }
+
+  return true
+}
+
+// 清除文件
+const clearFile = () => {
+  // 释放预览 URL
+  if (uploadedFilePreviewUrl.value) {
+    URL.revokeObjectURL(uploadedFilePreviewUrl.value)
+    uploadedFilePreviewUrl.value = ''
+  }
+  uploadedFile.value = null
+}
+
+// 获取输入框提示文本
+const getInputPlaceholder = () => {
+  if (!canSendMessage.value) {
+    return '请先选择一个模型'
+  }
+  if (selectedPluginKey.value === 'pdf_parser') {
+    return '粘贴 PDF 文件，然后输入您的问题...'
+  }
+  if (selectedPluginKey.value === 'image_recognition') {
+    return '粘贴图片，然后输入您的问题...'
+  }
+  return '输入您的问题...'
+}
+
+// 格式化文件大小
+const formatFileSize = (bytes: number) => {
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+  return (bytes / 1024 / 1024).toFixed(1) + ' MB'
+}
+
 
 // 显示模型选择弹窗
 const showModelSelector = () => {
@@ -345,10 +588,32 @@ const sendMessage = async () => {
   const userMessage = inputMessage.value.trim()
 
   // 添加用户消息到对话列表
-  messages.value.push({
+  const userMsg: Message = {
     role: 'user',
     content: userMessage,
-  })
+  }
+
+  // 如果有上传的文件，添加文件信息和预览
+  if (uploadedFile.value) {
+    userMsg.file = {
+      name: uploadedFile.value.name,
+      size: uploadedFile.value.size,
+      type: uploadedFile.value.type,
+    }
+    // 保存图片预览 URL
+    if (uploadedFilePreviewUrl.value) {
+      userMsg.filePreviewUrl = uploadedFilePreviewUrl.value
+    }
+  }
+
+  // 如果启用了插件，记录插件信息
+  if (enableWebSearch.value) {
+    userMsg.pluginKey = 'web_search'
+  } else if (selectedPluginKey.value) {
+    userMsg.pluginKey = selectedPluginKey.value
+  }
+
+  messages.value.push(userMsg)
 
   loading.value = true
   streamingContent.value = ''
@@ -358,27 +623,18 @@ const sendMessage = async () => {
   nextTick(() => scrollToBottom())
 
   try {
-    // 构建请求
-    const chatRequest: Record<string, unknown> = {
-      messages: messages.value.map(m => ({
-        role: m.role,
-        content: m.content,
-      })),
-      stream: true,
-      routing_strategy: routingStrategy.value,
+    // 如果有上传文件，使用文件上传接口
+    if (uploadedFile.value) {
+      await sendMessageWithFile()
+    } else {
+      await sendNormalMessage()
     }
 
-    // 固定模型策略时，传递选择的模型和深度思考配置
-    if (routingStrategy.value === 'fixed' && selectedModel.value) {
-      chatRequest.model = selectedModel.value.modelKey
-      chatRequest.enable_reasoning = selectedModel.value.supportReasoning === 1 ? enableReasoning.value : false
-    }
-
-    // 调用流式API
-    await streamChat(chatRequest)
-
-    // 成功后清空输入框
+    // 成功后清空输入框和文件
     inputMessage.value = ''
+    clearFile()
+    // 清空插件选择（但保留联网搜索开关状态）
+    selectedPluginKey.value = ''
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : '未知错误'
     message.error('对话失败: ' + errorMsg)
@@ -391,7 +647,93 @@ const sendMessage = async () => {
   }
 }
 
-// 流式调用
+// 发送普通消息（不带文件）
+const sendNormalMessage = async () => {
+  // 构建请求
+  const chatRequest: Record<string, unknown> = {
+    messages: messages.value.map(m => ({
+      role: m.role,
+      content: m.content,
+    })),
+    stream: true,
+    routing_strategy: routingStrategy.value,
+  }
+
+  // 固定模型策略时，传递选择的模型和深度思考配置
+  if (routingStrategy.value === 'fixed' && selectedModel.value) {
+    chatRequest.model = selectedModel.value.modelKey
+    chatRequest.enable_reasoning = selectedModel.value.supportReasoning === 1 ? enableReasoning.value : false
+  }
+
+  // 如果启用了联网搜索，添加插件信息
+  if (enableWebSearch.value) {
+    chatRequest.plugin_key = 'web_search'
+  }
+
+  // 调用流式API
+  await streamChat(chatRequest)
+}
+
+// 发送带文件的消息
+const sendMessageWithFile = async () => {
+  if (!uploadedFile.value) {
+    return
+  }
+
+  // 构建 FormData
+  const formData = new FormData()
+  formData.append('file', uploadedFile.value)
+
+  // 添加消息列表（JSON 字符串）
+  const messagesData = messages.value.map(m => ({
+    role: m.role,
+    content: m.content,
+  }))
+  formData.append('messages', JSON.stringify(messagesData))
+
+  // 添加流式参数
+  formData.append('stream', 'true')
+
+  // 添加路由策略
+  if (routingStrategy.value) {
+    formData.append('routing_strategy', routingStrategy.value)
+  }
+
+  // 固定模型策略时，传递选择的模型
+  if (routingStrategy.value === 'fixed' && selectedModel.value && selectedModel.value.modelKey) {
+    formData.append('model', selectedModel.value.modelKey)
+    if (selectedModel.value.supportReasoning === 1) {
+      formData.append('enable_reasoning', String(enableReasoning.value))
+    }
+  }
+
+  // 传递选择的插件
+  if (selectedPluginKey.value) {
+    formData.append('plugin_key', selectedPluginKey.value)
+  }
+
+  // 调用文件上传接口
+  await streamChatWithFile(formData)
+}
+
+// 流式调用（带文件上传）
+const streamChatWithFile = async (formData: FormData) => {
+  const url = `/api/internal/chat/completions/upload`
+
+  const response = await fetch(url, {
+    method: 'POST',
+    credentials: 'include', // 携带 session cookie
+    body: formData,
+  })
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`)
+  }
+
+  await processStream(response)
+}
+
+// 流式调用（普通消息）
 const streamChat = async (chatRequest: Record<string, unknown>) => {
   const url = `/api/internal/chat/completions`
 
@@ -416,6 +758,11 @@ const streamChat = async (chatRequest: Record<string, unknown>) => {
     }
   }
 
+  await processStream(response)
+}
+
+// 处理流式响应（通用方法）
+const processStream = async (response: Response) => {
   const reader = response.body?.getReader()
   const decoder = new TextDecoder()
 
@@ -446,7 +793,6 @@ const streamChat = async (chatRequest: Record<string, unknown>) => {
         if (line.startsWith('data:')) {
           // 移除 'data:' 前缀
           const data = line.substring(5).trim()
-          console.log("data:",data);
 
           if (!data) {
             continue
@@ -521,20 +867,19 @@ const streamChat = async (chatRequest: Record<string, unknown>) => {
   }
 
   // 完成后添加到消息列表
-  const message: Message = {
+  const msg: Message = {
     role: 'assistant',
     content: assistantContent,
-    aiDisplayName: getAIDisplayName(),  // 记录当时使用的模型名
   }
 
   // 如果有思考内容，添加到消息中
   if (thinkingContent) {
-    message.thinking = thinkingContent
-    message.answer = assistantContent
-    message.thinkingExpanded = false  // 默认收起
+    msg.thinking = thinkingContent
+    msg.answer = assistantContent
+    msg.thinkingExpanded = false  // 默认收起
   }
 
-  messages.value.push(message)
+  messages.value.push(msg)
   streamingContent.value = ''
   streamingThinking.value = ''
 }
@@ -575,6 +920,7 @@ watch([streamingContent, streamingThinking], () => {
 
 onMounted(() => {
   loadModels()
+  loadEnabledPlugins()
 })
 </script>
 
@@ -583,71 +929,109 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   height: calc(100vh - 64px);
-  background: #f5f5f5;
+  background: linear-gradient(180deg, #f0f2f5 0%, #fafafa 100%);
   overflow: hidden;
 }
 
 .model-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 12px;
-  padding: 8px 0;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  padding: 12px 0;
 }
 
 .model-card {
-  padding: 16px;
-  border: 2px solid #e8e8e8;
-  border-radius: 8px;
+  padding: 18px;
+  border: 2px solid #f0f0f0;
+  border-radius: 12px;
   cursor: pointer;
   transition: all 0.3s;
   background: white;
+  position: relative;
 }
 
 .model-card:hover {
   border-color: #1890ff;
-  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.2);
+  box-shadow: 0 4px 16px rgba(24, 144, 255, 0.15);
+  transform: translateY(-2px);
 }
 
 .model-card.active {
   border-color: #1890ff;
-  background: #e6f7ff;
+  background: linear-gradient(135deg, #e6f7ff 0%, #f0f9ff 100%);
+  box-shadow: 0 4px 16px rgba(24, 144, 255, 0.2);
+}
+
+.model-card.active::after {
+  content: '✓';
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 22px;
+  height: 22px;
+  background: #1890ff;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3);
 }
 
 .model-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  gap: 8px;
+}
+
+.model-card.active .model-header {
+  padding-left: 28px;
 }
 
 .model-name {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 17px;
+  font-weight: 700;
   color: #262626;
+  letter-spacing: -0.3px;
+  flex: 1;
+}
+
+.model-card.active .model-name {
+  color: #1890ff;
 }
 
 .model-info {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   font-size: 12px;
   color: #8c8c8c;
 }
 
 .model-provider {
   color: #1890ff;
+  font-weight: 500;
+  background: #f0f5ff;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 11px;
 }
 
 .model-price {
   color: #52c41a;
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 12px;
 }
 
 .model-desc {
-  font-size: 12px;
+  font-size: 13px;
   color: #595959;
-  line-height: 1.4;
+  line-height: 1.5;
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
@@ -659,13 +1043,13 @@ onMounted(() => {
 /* 对话内容包裹层 */
 .chat-wrapper {
   flex: 1;
-  max-width: 900px;
+  max-width: 1000px;
   margin: 0 auto;
   width: 100%;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  padding: 20px;
+  padding: 24px;
 }
 
 /* 消息列表区域 */
@@ -680,110 +1064,225 @@ onMounted(() => {
 
 .empty-state {
   text-align: center;
-  padding: 60px 20px;
+  padding: 80px 20px;
   color: #8c8c8c;
 }
 
 .empty-state h2 {
-  font-size: 24px;
-  margin-bottom: 8px;
+  font-size: 28px;
+  margin-bottom: 12px;
   color: #262626;
+  font-weight: 600;
+  background: linear-gradient(135deg, #1890ff 0%, #722ed1 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.empty-state p {
+  font-size: 15px;
+  color: #8c8c8c;
 }
 
 .message-wrapper {
-  margin-bottom: 16px;
+  margin-bottom: 24px;
+  animation: messageSlideIn 0.3s ease-out;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.message-wrapper.user {
+  align-items: flex-end;
+}
+
+.message-wrapper.assistant {
+  align-items: flex-start;
+}
+
+/* 角色标签 */
+.role-label {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 0;
+  margin-bottom: 2px;
+}
+
+.assistant-label {
+  color: #8c8c8c;
+  padding-left: 4px;
+}
+
+.user-label {
+  color: #1890ff;
+  padding-right: 4px;
+}
+
+@keyframes messageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .message {
-  padding: 16px 20px;
-  border-radius: 12px;
+  padding: 14px 18px;
+  border-radius: 16px;
   max-width: 100%;
+  transition: all 0.3s;
+  line-height: 1.7;
+  position: relative;
 }
 
 .message.user {
-  background: #1890ff;
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
   color: white;
-  margin-left: auto;
-  margin-right: 0;
-  max-width: 80%;
+  width: fit-content;
+  max-width: 65%;
+  box-shadow: 0 3px 14px rgba(24, 144, 255, 0.28);
+  word-break: break-word;
+  border-bottom-right-radius: 4px;
+}
+
+.message.user:hover {
+  box-shadow: 0 5px 20px rgba(24, 144, 255, 0.38);
+  transform: translateY(-1px);
 }
 
 .message.assistant {
   background: white;
-  border: 1px solid #e8e8e8;
-  max-width: 100%;
+  border: 1px solid #f0f0f0;
+  max-width: 90%;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  border-bottom-left-radius: 4px;
 }
 
-.message-header {
-  margin-bottom: 8px;
-  font-size: 14px;
-}
-
-.message.user .message-header {
-  color: rgba(255, 255, 255, 0.85);
-}
-
-.message.assistant .message-header {
-  color: #8c8c8c;
+.message.assistant:hover {
+  box-shadow: 0 3px 16px rgba(0, 0, 0, 0.08);
+  border-color: #e8e8e8;
 }
 
 .message-content {
-  line-height: 1.6;
+  line-height: 1.7;
   word-wrap: break-word;
+  font-size: 14px;
+}
+
+.message.user .message-content {
+  color: rgba(255, 255, 255, 0.98);
+  font-weight: 400;
+}
+
+.loading-message {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #8c8c8c;
+  font-size: 14px;
 }
 
 .message-content :deep(pre) {
-  background: #f6f6f6;
-  padding: 12px;
-  border-radius: 6px;
+  background: #282c34;
+  padding: 16px;
+  border-radius: 10px;
   overflow-x: auto;
-  margin: 8px 0;
+  margin: 12px 0;
+  border: 1px solid #e0e0e0;
 }
 
 .message-content :deep(code) {
-  background: #f6f6f6;
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-family: 'Monaco', 'Consolas', monospace;
+  background: #f0f2f5;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
+  font-size: 13px;
+  color: #d63384;
+  border: 1px solid #e8e8e8;
 }
 
 .message-content :deep(pre code) {
   background: transparent;
   padding: 0;
+  border: none;
+  color: #abb2bf;
+  font-size: 13px;
+}
+
+.message-content :deep(blockquote) {
+  border-left: 4px solid #1890ff;
+  padding-left: 16px;
+  margin: 12px 0;
+  color: #595959;
+  background: #f0f5ff;
+  padding: 12px 16px;
+  border-radius: 8px;
+}
+
+.message-content :deep(ul),
+.message-content :deep(ol) {
+  padding-left: 24px;
+  margin: 8px 0;
+}
+
+.message-content :deep(li) {
+  margin: 6px 0;
+}
+
+.message-content :deep(a) {
+  color: #1890ff;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: all 0.3s;
+}
+
+.message-content :deep(a:hover) {
+  border-bottom-color: #1890ff;
 }
 
 /* 思考内容样式 */
 .thinking-section {
-  margin-bottom: 16px;
-  border-radius: 6px;
-  background: #f8f8f8;
+  margin-bottom: 18px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #faf5ff 0%, #f0f0f0 100%);
   overflow: hidden;
-  border: 1px solid #e0e0e0;
+  border: 1px solid #d3adf7;
 }
 
 .thinking-toggle {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
+  padding: 10px 16px;
   cursor: pointer;
   user-select: none;
-  transition: background 0.2s;
+  transition: all 0.3s;
 }
 
 .thinking-toggle:hover {
-  background: #ececec;
+  background: rgba(114, 46, 209, 0.05);
 }
 
 .thinking-title {
   font-size: 13px;
-  color: #888;
-  font-weight: 400;
+  color: #722ed1;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.thinking-title::before {
+  content: '💭';
+  font-size: 14px;
 }
 
 .thinking-arrow {
   font-size: 11px;
-  color: #888;
+  color: #722ed1;
   transition: transform 0.3s;
 }
 
@@ -792,12 +1291,12 @@ onMounted(() => {
 }
 
 .thinking-detail {
-  padding: 12px 14px;
-  background: #fafafa;
-  border-top: 1px solid #e0e0e0;
-  color: #666;
-  font-size: 15px;
-  line-height: 1.6;
+  padding: 16px 18px;
+  background: rgba(250, 245, 255, 0.5);
+  border-top: 1px solid #efdbff;
+  color: #595959;
+  font-size: 14px;
+  line-height: 1.7;
 }
 
 .thinking-detail :deep(p) {
@@ -836,18 +1335,19 @@ onMounted(() => {
 .input-container {
   flex-shrink: 0;
   background: white;
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  border: 1px solid #f0f0f0;
 }
 
 .options-bar {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #f0f0f0;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e8e8e8;
   flex-wrap: wrap;
 }
 
@@ -855,45 +1355,58 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid #d9d9d9;
-  border-radius: 8px;
-  padding: 8px 16px;
+  border: 1px solid #e8e8e8;
+  border-radius: 10px;
+  padding: 8px 14px;
   height: auto;
-  font-size: 14px;
+  font-size: 13px;
   transition: all 0.3s;
+  background: #fafafa;
 }
 
 .model-select-button:hover {
   border-color: #1890ff;
   color: #1890ff;
+  background: #f0f5ff;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.1);
+  transform: translateY(-1px);
 }
 
 .current-model {
-  font-weight: 500;
+  font-weight: 600;
+  color: #262626;
 }
 
 .dropdown-icon {
-  font-size: 12px;
-  opacity: 0.6;
+  font-size: 11px;
+  opacity: 0.5;
 }
 
 .reasoning-switch {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 16px;
-  background: #f5f5f5;
-  border-radius: 8px;
+  padding: 8px 14px;
+  background: linear-gradient(135deg, #f9f0ff 0%, #efdbff 100%);
+  border: 1px solid #d3adf7;
+  border-radius: 10px;
+  transition: all 0.3s;
+}
+
+.reasoning-switch:hover {
+  background: linear-gradient(135deg, #f9f0ff 0%, #d3adf7 100%);
+  box-shadow: 0 2px 8px rgba(114, 46, 209, 0.15);
 }
 
 .reasoning-icon {
-  font-size: 16px;
+  font-size: 15px;
   color: #722ed1;
 }
 
 .reasoning-label {
-  font-size: 14px;
-  color: #262626;
+  font-size: 13px;
+  color: #722ed1;
+  font-weight: 500;
   margin-right: 4px;
 }
 
@@ -902,52 +1415,259 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid #d9d9d9;
-  border-radius: 8px;
-  padding: 8px 16px;
+  border: 1px solid #b5f5ec;
+  border-radius: 10px;
+  padding: 8px 14px;
   height: auto;
-  font-size: 14px;
-  background: linear-gradient(135deg, #f0f5ff 0%, #e6f4ff 100%);
+  font-size: 13px;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e6f7ff 100%);
   transition: all 0.3s;
 }
 
 .strategy-select-button:hover {
   border-color: #1890ff;
-  background: linear-gradient(135deg, #e6f4ff 0%, #d6e4ff 100%);
+  background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.15);
+  transform: translateY(-1px);
 }
 
 .strategy-label {
-  font-weight: 500;
+  font-weight: 600;
   color: #1890ff;
 }
 
 .strategy-option {
-  padding: 4px 0;
-  min-width: 200px;
+  padding: 8px 12px;
+  min-width: 260px;
+  border-radius: 8px;
+  transition: all 0.3s;
+}
+
+.strategy-option:hover {
+  background: #f5f5f5;
 }
 
 .strategy-option-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .strategy-option-label {
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   color: #262626;
 }
 
 .strategy-option-desc {
   font-size: 12px;
   color: #8c8c8c;
+  line-height: 1.5;
 }
 
 .strategy-active {
-  background: #e6f4ff;
+  background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
+  border: 1px solid #91d5ff;
 }
 
+.strategy-active .strategy-option-label {
+  color: #1890ff;
+}
+
+/* 插件开关 */
+.plugin-switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: linear-gradient(135deg, #f0f5ff 0%, #e8f4ff 100%);
+  border: 1px solid #d6e4ff;
+  border-radius: 10px;
+  transition: all 0.3s;
+}
+
+.plugin-switch:hover {
+  background: linear-gradient(135deg, #e6f4ff 0%, #d6e4ff 100%);
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.15);
+}
+
+.plugin-icon {
+  font-size: 15px;
+  color: #1890ff;
+}
+
+.plugin-label {
+  font-size: 13px;
+  color: #1890ff;
+  font-weight: 500;
+  margin-right: 4px;
+}
+
+/* 插件按钮 */
+.plugin-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 10px;
+  font-size: 13px;
+  border: 1px solid #e8e8e8;
+  transition: all 0.3s;
+  padding: 8px 14px;
+  background: white;
+  color: #595959;
+}
+
+.plugin-button:hover {
+  border-color: #1890ff;
+  color: #1890ff;
+  background: #f0f5ff;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+/* Primary 状态的插件按钮 */
+.plugin-button.ant-btn-primary {
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%) !important;
+  border-color: #1890ff !important;
+  color: white !important;
+  font-weight: 500;
+}
+
+.plugin-button.ant-btn-primary:hover {
+  background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%) !important;
+  border-color: #40a9ff !important;
+  color: white !important;
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+}
+
+/* 文件信息栏 */
+.file-info-bar {
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #e6fffb 0%, #e6f7ff 100%);
+  border: 1px solid #b5f5ec;
+  border-radius: 12px;
+  margin-bottom: 14px;
+  transition: all 0.3s;
+}
+
+.file-info-bar:hover {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.file-preview-container {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.file-preview-image {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.file-info {
+  flex: 1;
+}
+
+.file-name {
+  font-weight: 600;
+  color: #262626;
+  font-size: 14px;
+}
+
+.file-size {
+  font-size: 12px;
+  color: #8c8c8c;
+  margin-left: 8px;
+}
+
+.delete-icon {
+  font-size: 16px;
+  color: #ff7875;
+  cursor: pointer;
+  transition: all 0.3s;
+  padding: 4px;
+}
+
+.delete-icon:hover {
+  color: #ff4d4f;
+  background: rgba(255, 77, 79, 0.1);
+  border-radius: 4px;
+  transform: scale(1.15);
+}
+
+/* 消息中的文件信息 */
+.message-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 10px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.message.user .message-file {
+  background: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 1);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.message.user .message-file .file-name {
+  color: rgba(255, 255, 255, 1);
+  font-weight: 500;
+}
+
+.message.user .message-file .file-size {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* 图片预览 */
+.image-preview {
+  margin-bottom: 12px;
+  max-width: 240px;
+}
+
+.image-thumbnail {
+  width: 100%;
+  max-width: 240px;
+  max-height: 240px;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  display: block;
+  object-fit: cover;
+  transition: all 0.3s;
+}
+
+.image-thumbnail:hover {
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+  transform: scale(1.02);
+}
+
+.image-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.image-name {
+  font-weight: 500;
+}
+
+.image-size {
+  opacity: 0.8;
+}
 
 .input-wrapper {
   display: flex;
@@ -956,8 +1676,19 @@ onMounted(() => {
 }
 
 .chat-input {
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: 15px;
+  border: 1px solid #e8e8e8;
+  transition: all 0.3s;
+}
+
+.chat-input:hover {
+  border-color: #d9d9d9;
+}
+
+.chat-input:focus {
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
 }
 
 .input-actions {
@@ -966,17 +1697,39 @@ onMounted(() => {
   align-items: center;
 }
 
+.input-actions :deep(.ant-btn-primary) {
+  height: 40px;
+  padding: 0 32px;
+  font-size: 15px;
+  font-weight: 500;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.2);
+}
+
+.input-actions :deep(.ant-btn-primary:hover) {
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+  transform: translateY(-1px);
+}
+
 /* 滚动条样式 */
 .messages-container::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
+}
+
+.messages-container::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 4px;
 }
 
 .messages-container::-webkit-scrollbar-thumb {
-  background-color: rgba(0, 0, 0, 0.2);
-  border-radius: 3px;
+  background: linear-gradient(180deg, #d9d9d9 0%, #bfbfbf 100%);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 .messages-container::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(0, 0, 0, 0.3);
+  background: linear-gradient(180deg, #bfbfbf 0%, #8c8c8c 100%);
+  background-clip: padding-box;
 }
 </style>
